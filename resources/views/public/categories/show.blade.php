@@ -1,30 +1,24 @@
 @extends('layouts.base')
 
 @php
-    $translation = $category->translations->where('locale', 'hi')->first() 
-        ?? $category->translations->where('locale', 'en')->first() 
-        ?? $category->translations->first();
+    $locale = app()->getLocale();
+    $translation = $category->localized($locale);
 
     $name = $translation?->name ?? $category->slug;
     $description = $translation?->description;
 
     $breadcrumbs = [
         ['label' => 'Home', 'url' => route('home')],
-        ['label' => 'Categories', 'url' => route('home') . '#browse-categories'],
+        ['label' => $locale === 'hi' ? 'श्रेणियाँ' : 'Categories', 'url' => route('home') . '#browse-categories'],
     ];
 
     if ($category->parent) {
-        $parentTrans = $category->parent->translations->where('locale', 'hi')->first() 
-            ?? $category->parent->translations->where('locale', 'en')->first() 
-            ?? $category->parent->translations->first();
-        $parentName = $parentTrans?->name ?? $category->parent->slug;
-        $breadcrumbs[] = ['label' => $parentName, 'url' => route('categories.show', $category->parent->slug)];
+        $parentName = $category->parent->localized($locale)?->name ?? $category->parent->slug;
+        $breadcrumbs[] = ['label' => $parentName, 'url' => route('categories.show', ['slug' => $category->parent->slug])];
     }
 
     $breadcrumbs[] = ['label' => $name, 'url' => null];
 @endphp
-
-@section('title', $name . ' — Books & Literature | Hindi PDF Library')
 
 @section('content')
 <div class="space-y-12 pb-16">

@@ -1,20 +1,15 @@
 @extends('layouts.base')
 
 @php
-    $translation = $book->translations->where('locale', 'hi')->first() 
-        ?? $book->translations->where('locale', 'en')->first() 
-        ?? $book->translations->first();
-    
+    $locale = app()->getLocale();
+    $translation = $book->localized($locale);
     $title = $translation?->title ?? $book->slug;
+
     $primaryAuthor = $book->authors->first();
-    $authorName = $primaryAuthor?->translations->where('locale', 'hi')->first()?->name 
-        ?? $primaryAuthor?->translations->where('locale', 'en')->first()?->name 
-        ?? $primaryAuthor?->slug;
+    $authorName = $primaryAuthor?->localized($locale)?->name ?? $primaryAuthor?->slug;
 
     $primaryCategory = $book->categories->first();
-    $categoryName = $primaryCategory?->translations->where('locale', 'hi')->first()?->name 
-        ?? $primaryCategory?->translations->where('locale', 'en')->first()?->name 
-        ?? $primaryCategory?->slug;
+    $categoryName = $primaryCategory?->localized($locale)?->name ?? $primaryCategory?->slug;
 
     $coverMedia = $book->media->where('collection_name', 'cover')->first() ?? $book->media->first();
     $coverUrl = $coverMedia ? asset('storage/' . $coverMedia->file_name) : null;
@@ -23,7 +18,7 @@
         ['label' => 'Home', 'url' => route('home')],
     ];
     if ($primaryCategory) {
-        $breadcrumbs[] = ['label' => $categoryName, 'url' => route('categories.show', $primaryCategory->slug)];
+        $breadcrumbs[] = ['label' => $categoryName, 'url' => route('categories.show', ['slug' => $primaryCategory->slug])];
     }
     $breadcrumbs[] = ['label' => $title, 'url' => null];
 
@@ -31,8 +26,6 @@
         ? $translation->key_themes 
         : (is_string($translation?->key_themes) ? json_decode($translation->key_themes, true) : []);
 @endphp
-
-@section('title', $title . ($authorName ? ' — ' . $authorName : '') . ' | Hindi PDF Library')
 
 @section('content')
 <div class="space-y-12 pb-16">

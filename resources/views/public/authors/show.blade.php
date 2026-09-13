@@ -1,9 +1,8 @@
 @extends('layouts.base')
 
 @php
-    $translation = $author->translations->where('locale', 'hi')->first() 
-        ?? $author->translations->where('locale', 'en')->first() 
-        ?? $author->translations->first();
+    $locale = app()->getLocale();
+    $translation = $author->localized($locale);
 
     $name = $translation?->name ?? $author->slug;
     $biography = $translation?->biography;
@@ -18,12 +17,10 @@
 
     $breadcrumbs = [
         ['label' => 'Home', 'url' => route('home')],
-        ['label' => 'Authors', 'url' => route('home') . '#browse-authors'],
+        ['label' => $locale === 'hi' ? 'लेखक' : 'Authors', 'url' => route('home') . '#browse-authors'],
         ['label' => $name, 'url' => null],
     ];
 @endphp
-
-@section('title', $name . ' — Books & Biography | Hindi PDF Library')
 
 @section('content')
 <div class="space-y-12 pb-16">

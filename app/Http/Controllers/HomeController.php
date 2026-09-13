@@ -6,6 +6,7 @@ use App\Models\Author;
 use App\Models\Book;
 use App\Models\Category;
 use App\Models\Language;
+use App\Services\SEO\SeoManager;
 use Illuminate\Contracts\View\View;
 
 class HomeController extends Controller
@@ -13,7 +14,7 @@ class HomeController extends Controller
     /**
      * Display the curated homepage.
      */
-    public function __invoke(): View
+    public function __invoke(?string $locale = null): View
     {
         $popularBooks = Book::published()
             ->with(['translations', 'authors.translations', 'categories.translations', 'media'])
@@ -68,6 +69,8 @@ class HomeController extends Controller
             ->orderByDesc('books_count')
             ->get();
 
+        $seo = SeoManager::forHome(app()->getLocale());
+
         return view('welcome', compact(
             'popularBooks',
             'featuredBooks',
@@ -75,7 +78,8 @@ class HomeController extends Controller
             'authors',
             'highlyRatedBooks',
             'recentBooks',
-            'languages'
+            'languages',
+            'seo'
         ));
     }
 }

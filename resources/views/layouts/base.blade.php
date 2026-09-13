@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? config('app.name', 'Hindi PDF Library') }}</title>
+    <!-- Dynamic Semantic SEO, Meta, Canonical, Hreflang & Schema.org Structured Data -->
+    <x-seo-head :seo="$seo ?? null" :title="$title ?? null" />
 
     <!-- Preconnect & Typography Fonts: Inter (Latin) + Noto Sans Devanagari (Hindi) -->
     <link rel="preconnect" href="https://fonts.bunny.net">

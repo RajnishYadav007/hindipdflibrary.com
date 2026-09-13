@@ -15,23 +15,21 @@
 @php
     // Extract properties if an Eloquent Book model is passed
     if ($book) {
-        $title = $title ?? ($book->translations->where('locale', 'hi')->first()?->title 
-                 ?? $book->translations->where('locale', 'en')->first()?->title 
-                 ?? $book->slug);
+        $locale = app()->getLocale();
+        $title = $title ?? ($book->localized($locale)?->title ?? $book->slug);
         
-        $author = $author ?? $book->authors->first()?->translations->where('locale', 'hi')->first()?->name 
-                  ?? $book->authors->first()?->translations->where('locale', 'en')->first()?->name 
-                  ?? $book->authors->first()?->slug;
+        $primaryAuthor = $book->authors->first();
+        $author = $author ?? ($primaryAuthor?->localized($locale)?->name ?? $primaryAuthor?->slug);
         
-        $category = $category ?? $book->categories->first()?->translations->where('locale', 'hi')->first()?->name 
-                    ?? $book->categories->first()?->slug;
+        $primaryCategory = $book->categories->first();
+        $category = $category ?? ($primaryCategory?->localized($locale)?->name ?? $primaryCategory?->slug);
         
         $coverMedia = $book->media?->where('collection_name', 'cover')->first() ?? $book->media?->first();
         $coverUrl = $coverUrl ?? ($coverMedia ? asset('storage/' . $coverMedia->file_name) : null);
         $year = $year ?? $book->publication_year;
         $rating = $rating ?? $book->rating_average;
         $ratingCount = $ratingCount ?? $book->rating_count;
-        $url = $url !== '#' ? $url : route('books.show', $book->slug);
+        $url = $url !== '#' ? $url : route('books.show', ['slug' => $book->slug]);
     }
 @endphp
 

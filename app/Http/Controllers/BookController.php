@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Services\Discovery\BookDiscoveryService;
+use App\Services\SEO\SeoManager;
 use Illuminate\Contracts\View\View;
 
 class BookController extends Controller
@@ -10,8 +12,10 @@ class BookController extends Controller
     /**
      * Display the specified book detail page.
      */
-    public function show(string $slug): View
+    public function show(string $localeOrSlug, ?string $slug = null): View
     {
+        $slug = $slug ?? $localeOrSlug;
+
         $book = Book::where('slug', $slug)
             ->with([
                 'translations',
@@ -39,28 +43,9 @@ class BookController extends Controller
             ->latest()
             ->paginate(10);
 
-        // More books by this author
-        $authorIds = $book->authors->pluck('id');
-        $authorBooks = $authorIds->isNotEmpty()
-            ? Book::published()
-                ->where('id', '!=', $book->id)
-                ->whereHas('authors', fn ($q) => $q->whereIn('authors.id', $authorIds))
-                ->with(['translations', 'authors.translations', 'categories.translations', 'media'])
-                ->take(4)
-                ->get()
-            : collect();
-
-        // Related books by category
-        $categoryIds = $book->categories->pluck('id');
-        $excludeIds = $authorBooks->pluck('id')->push($book->id);
-        $relatedBooks = $categoryIds->isNotEmpty()
-            ? Book::published()
-                ->whereNotIn('id', $excludeIds)
-                ->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $categoryIds))
-                ->with(['translations', 'authors.translations', 'categories.translations', 'media'])
-                ->take(4)
-                ->get()
-            : collect();
+        $discovery = app(BookDiscoveryService::class);
+        $authorBooks = $discovery->relatedByAuthor($book, 4);
+        $relatedBooks = $discovery->relatedByCategory($book, 4, $authorBooks);
 
         // Digital media asset (e.g. PDF)
         $pdfMedia = $book->media->where('collection_name', 'pdf')->first()
@@ -74,13 +59,17 @@ class BookController extends Controller
             ->pluck('count', 'rating')
             ->toArray();
 
+        // Semantic SEO metadata and Schema.org JSON-LD
+        $seo = SeoManager::forBook($book, app()->getLocale());
+
         return view('public.books.show', compact(
             'book',
             'reviews',
             'authorBooks',
             'relatedBooks',
             'pdfMedia',
-            'ratingDistribution'
+            'ratingDistribution',
+            'seo'
         ));
     }
 }

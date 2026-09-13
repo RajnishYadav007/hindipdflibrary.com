@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Author;
+use App\Services\SEO\SeoManager;
 use Illuminate\Contracts\View\View;
 
 class AuthorController extends Controller
@@ -10,8 +11,10 @@ class AuthorController extends Controller
     /**
      * Display the specified author profile page.
      */
-    public function show(string $slug): View
+    public function show(string $localeOrSlug, ?string $slug = null): View
     {
+        $slug = $slug ?? $localeOrSlug;
+
         $author = Author::where('slug', $slug)
             ->with(['translations', 'media'])
             ->firstOrFail();
@@ -34,6 +37,8 @@ class AuthorController extends Controller
             ->take(4)
             ->get();
 
-        return view('public.authors.show', compact('author', 'books', 'relatedAuthors'));
+        $seo = SeoManager::forAuthor($author, app()->getLocale());
+
+        return view('public.authors.show', compact('author', 'books', 'relatedAuthors', 'seo'));
     }
 }

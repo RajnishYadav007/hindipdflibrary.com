@@ -1,4 +1,4 @@
-@extends('layouts.base', ['title' => 'Hindi PDF Library — Classic & Contemporary Hindi Literature'])
+@extends('layouts.base')
 
 @section('content')
 <div class="space-y-16 pb-16">
