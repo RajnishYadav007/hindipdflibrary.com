@@ -66,12 +66,21 @@ class BookController extends Controller
         $pdfMedia = $book->media->where('collection_name', 'pdf')->first()
             ?? $book->media->filter(fn ($m) => str_contains($m->mime_type ?? '', 'pdf'))->first();
 
+        // 1-5 star rating distribution breakdown (from approved reviews)
+        $ratingDistribution = $book->reviews()
+            ->approved()
+            ->selectRaw('rating, count(*) as count')
+            ->groupBy('rating')
+            ->pluck('count', 'rating')
+            ->toArray();
+
         return view('public.books.show', compact(
             'book',
             'reviews',
             'authorBooks',
             'relatedBooks',
-            'pdfMedia'
+            'pdfMedia',
+            'ratingDistribution'
         ));
     }
 }

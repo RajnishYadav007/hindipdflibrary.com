@@ -87,6 +87,13 @@ class ReviewsTable
                     ->visible(fn ($record) => $record->status !== ReviewStatus::Rejected && $record->status !== ReviewStatus::Rejected->value)
                     ->action(fn ($record) => $record->update(['status' => ReviewStatus::Rejected->value])),
 
+                Action::make('spam')
+                    ->label('Mark Spam')
+                    ->icon('heroicon-m-shield-exclamation')
+                    ->color('gray')
+                    ->visible(fn ($record) => $record->status !== ReviewStatus::Spam && $record->status !== ReviewStatus::Spam->value)
+                    ->action(fn ($record) => $record->update(['status' => ReviewStatus::Spam->value])),
+
                 EditAction::make(),
                 DeleteAction::make(),
             ])

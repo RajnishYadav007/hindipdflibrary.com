@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\Books\RecalculateBookMetricsAction;
 use App\Enums\ReviewStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -50,10 +51,52 @@ class Review extends Model
     }
 
     /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Review $review): void {
+            if ($review->book) {
+                app(RecalculateBookMetricsAction::class)->handle($review->book);
+            }
+        });
+
+        static::deleted(function (Review $review): void {
+            if ($review->book) {
+                app(RecalculateBookMetricsAction::class)->handle($review->book);
+            }
+        });
+    }
+
+    /**
      * Scope a query to only include approved reviews.
      */
     public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', ReviewStatus::Approved);
+    }
+
+    /**
+     * Scope a query to only include pending reviews.
+     */
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', ReviewStatus::Pending);
+    }
+
+    /**
+     * Scope a query to only include rejected reviews.
+     */
+    public function scopeRejected(Builder $query): Builder
+    {
+        return $query->where('status', ReviewStatus::Rejected);
+    }
+
+    /**
+     * Scope a query to only include spam reviews.
+     */
+    public function scopeSpam(Builder $query): Builder
+    {
+        return $query->where('status', ReviewStatus::Spam);
     }
 }

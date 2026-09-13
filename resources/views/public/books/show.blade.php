@@ -377,43 +377,102 @@
     <!-- Community Ratings & Reviews Section -->
     <section id="reviews-section" class="border-t border-slate-200/80 pt-10">
         <x-ui.container size="default">
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-900">
-                        Reader Reviews &amp; Ratings (पाठक समीक्षा)
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        Moderated feedback and literary reflections from our community.
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <x-rating-stars :rating="$book->rating_average" :ratingCount="$book->rating_count" size="md" />
+            <div class="mb-8">
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-900">
+                    Reader Reviews &amp; Ratings (पाठक समीक्षा व रेटिंग)
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Authentic ratings and moderated literary reflections from verified community readers.
+                </p>
+            </div>
+
+            <!-- Rating Overview & Distribution Grid -->
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xs mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+                    <!-- Left: Average Rating Number -->
+                    <div class="md:col-span-4 flex flex-col items-center justify-center text-center sm:border-r sm:border-slate-100 sm:pr-6">
+                        <span class="text-5xl font-extrabold text-slate-900 tracking-tight">
+                            {{ number_format($book->rating_average, 1) }}
+                        </span>
+                        <div class="mt-2">
+                            <x-rating-stars :rating="$book->rating_average" :showCount="false" size="md" />
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500 font-medium">
+                            Based on {{ number_format($book->rating_count) }} {{ $book->rating_count === 1 ? 'rating' : 'ratings' }}
+                            @if ($book->review_count > 0)
+                                &bull; {{ number_format($book->review_count) }} {{ $book->review_count === 1 ? 'review' : 'reviews' }}
+                            @endif
+                        </p>
+                    </div>
+
+                    <!-- Right: 1-5 Star Breakdown Bars -->
+                    <div class="md:col-span-8 space-y-2">
+                        @foreach ([5, 4, 3, 2, 1] as $stars)
+                            @php
+                                $starCount = $ratingDistribution[$stars] ?? 0;
+                                $percentage = $book->rating_count > 0 ? round(($starCount / $book->rating_count) * 100) : 0;
+                            @endphp
+                            <div class="flex items-center gap-3 text-xs">
+                                <span class="w-8 shrink-0 font-bold text-slate-700 flex items-center justify-end gap-0.5">
+                                    {{ $stars }} <span class="text-amber-400">★</span>
+                                </span>
+                                <div class="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                                    <div 
+                                        class="h-full rounded-full bg-amber-400 transition-all duration-500" 
+                                        style="width: {{ $percentage }}%"
+                                        role="progressbar"
+                                        aria-valuenow="{{ $percentage }}"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        aria-label="{{ $stars }} star rating distribution: {{ $percentage }}%"
+                                    ></div>
+                                </div>
+                                <span class="w-12 shrink-0 text-right text-slate-400 font-mono text-[11px]">
+                                    {{ $starCount }}
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
-            @if ($reviews->isNotEmpty())
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach ($reviews as $review)
-                        <x-review-card :review="$review" />
-                    @endforeach
+            <!-- Livewire Rating & Review Submission Form -->
+            <div class="mb-10">
+                <livewire:book-review-form :book="$book" />
+            </div>
+
+            <!-- Public Approved Reviews List -->
+            <div class="pt-6 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-base font-bold text-slate-900">
+                        Community Reviews ({{ $reviews->total() }})
+                    </h3>
                 </div>
 
-                <div class="mt-6">
-                    {{ $reviews->links() }}
-                </div>
-            @else
-                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center">
-                    <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-                        </svg>
+                @if ($reviews->isNotEmpty())
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach ($reviews as $review)
+                            <x-review-card :review="$review" />
+                        @endforeach
                     </div>
-                    <h3 class="text-sm font-semibold text-slate-800">No public reviews yet</h3>
-                    <p class="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-                        Be the first reader to share critical thoughts on this work. Reader submission workflow will open shortly.
-                    </p>
-                </div>
-            @endif
+
+                    <div class="mt-8">
+                        {{ $reviews->links() }}
+                    </div>
+                @else
+                    <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center">
+                        <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                            </svg>
+                        </div>
+                        <h4 class="text-sm font-semibold text-slate-800">No community reviews published yet</h4>
+                        <p class="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                            Be the first reader to rate this title and share your perspective using the form above.
+                        </p>
+                    </div>
+                @endif
+            </div>
         </x-ui.container>
     </section>
 
