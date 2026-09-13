@@ -19,10 +19,10 @@ class BookFactory extends Factory
         $title = fake()->words(3, true);
 
         return [
-            'slug' => Str::slug($title) . '-' . fake()->unique()->numberBetween(1000, 999999),
+            'slug' => Str::slug($title).'-'.fake()->unique()->numberBetween(1000, 999999),
             'status' => BookStatus::Published,
             'publication_year' => fake()->numberBetween(1920, 2024),
-            'publisher' => fake()->company() . ' Publications',
+            'publisher' => fake()->company().' Publications',
             'isbn' => fake()->numerify('##########'),
             'isbn13' => fake()->numerify('#############'),
             'pages' => fake()->numberBetween(64, 750),

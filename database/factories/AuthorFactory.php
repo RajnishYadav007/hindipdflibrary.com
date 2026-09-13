@@ -18,7 +18,7 @@ class AuthorFactory extends Factory
         $name = fake()->name();
 
         return [
-            'slug' => Str::slug($name) . '-' . fake()->unique()->numberBetween(100, 99999),
+            'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(100, 99999),
             'is_active' => true,
         ];
     }

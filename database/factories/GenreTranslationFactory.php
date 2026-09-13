@@ -22,7 +22,7 @@ class GenreTranslationFactory extends Factory
             'locale' => 'en',
             'name' => ucfirst($name),
             'description' => fake()->sentence(),
-            'seo_title' => ucfirst($name) . ' Genre Books - Hindi PDF Library',
+            'seo_title' => ucfirst($name).' Genre Books - Hindi PDF Library',
             'seo_description' => "Discover top rated {$name} literature and Hindi digital books.",
         ];
     }

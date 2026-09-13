@@ -104,7 +104,7 @@ class RelationshipTest extends TestCase
             'seoable_type' => Book::class,
             'seoable_id' => $book->id,
             'locale' => 'hi',
-            'canonical_url' => 'https://hindipdflibrary.com/hi/book/' . $book->slug,
+            'canonical_url' => 'https://hindipdflibrary.com/hi/book/'.$book->slug,
             'robots' => 'index, follow',
         ]);
 

@@ -51,7 +51,6 @@ class Author extends Model
             ->withTimestamps();
     }
 
-
     /**
      * Media items associated with the author (e.g. portrait).
      */

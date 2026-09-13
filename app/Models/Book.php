@@ -75,7 +75,6 @@ class Book extends Model
             ->withTimestamps();
     }
 
-
     /**
      * Categories the book belongs to.
      */

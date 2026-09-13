@@ -22,7 +22,7 @@ class CategoryTranslationFactory extends Factory
             'locale' => 'en',
             'name' => ucfirst($name),
             'description' => fake()->paragraph(),
-            'seo_title' => ucfirst($name) . ' Books & Literature - Hindi PDF Library',
+            'seo_title' => ucfirst($name).' Books & Literature - Hindi PDF Library',
             'seo_description' => "Browse our curated collection of {$name} digital books and PDFs.",
         ];
     }

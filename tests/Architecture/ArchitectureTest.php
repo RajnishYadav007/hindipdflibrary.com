@@ -37,7 +37,7 @@ class ArchitectureTest extends TestCase
         $this->assertNotEmpty($modelFiles, 'app/Models must contain model classes.');
 
         foreach ($modelFiles as $file) {
-            $className = 'App\\Models\\' . basename($file, '.php');
+            $className = 'App\\Models\\'.basename($file, '.php');
 
             $this->assertTrue(
                 class_exists($className),

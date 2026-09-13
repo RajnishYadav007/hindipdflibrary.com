@@ -19,7 +19,7 @@ class CategoryFactory extends Factory
 
         return [
             'parent_id' => null,
-            'slug' => Str::slug($name) . '-' . fake()->unique()->numberBetween(100, 99999),
+            'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(100, 99999),
             'is_active' => true,
             'sort_order' => fake()->numberBetween(0, 50),
         ];
