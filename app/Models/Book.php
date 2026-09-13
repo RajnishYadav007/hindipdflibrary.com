@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BookStatus;
 use App\Models\Concerns\HasTranslations;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -137,5 +138,21 @@ class Book extends Model
     public function seoMeta(): MorphOne
     {
         return $this->morphOne(SeoMeta::class, 'seoable');
+    }
+
+    /**
+     * Scope a query to only include published books.
+     */
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('status', BookStatus::Published);
+    }
+
+    /**
+     * Check if the book is published.
+     */
+    public function isPublished(): bool
+    {
+        return $this->status === BookStatus::Published;
     }
 }

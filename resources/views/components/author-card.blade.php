@@ -17,7 +17,7 @@
                ?? $author->translations->where('locale', 'en')->first()?->biography);
         
         $bookCount = $bookCount ?? $author->books_count ?? ($author->books ? $author->books->count() : null);
-        $url = $url !== '#' ? $url : url('/authors/' . $author->slug);
+        $url = $url !== '#' ? $url : route('authors.show', $author->slug);
     }
 
     $initials = collect(explode(' ', $name ?? 'Author'))

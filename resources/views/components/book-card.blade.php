@@ -26,10 +26,12 @@
         $category = $category ?? $book->categories->first()?->translations->where('locale', 'hi')->first()?->name 
                     ?? $book->categories->first()?->slug;
         
+        $coverMedia = $book->media?->where('collection_name', 'cover')->first() ?? $book->media?->first();
+        $coverUrl = $coverUrl ?? ($coverMedia ? asset('storage/' . $coverMedia->file_name) : null);
         $year = $year ?? $book->publication_year;
         $rating = $rating ?? $book->rating_average;
         $ratingCount = $ratingCount ?? $book->rating_count;
-        $url = $url !== '#' ? $url : url('/books/' . $book->slug);
+        $url = $url !== '#' ? $url : route('books.show', $book->slug);
     }
 @endphp
 

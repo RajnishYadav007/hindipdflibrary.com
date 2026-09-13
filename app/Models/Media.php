@@ -12,6 +12,13 @@ class Media extends Model
 
     protected $table = 'media';
 
+    protected $attributes = [
+        'manipulations' => '[]',
+        'custom_properties' => '[]',
+        'generated_conversions' => '[]',
+        'responsive_images' => '[]',
+    ];
+
     protected $fillable = [
         'model_type',
         'model_id',

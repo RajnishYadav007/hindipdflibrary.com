@@ -1,5 +1,5 @@
 @props([
-    'action' => '#',
+    'action' => route('search'),
     'method' => 'GET',
     'placeholder' => 'Search books, authors, ISBN, topics...',
     'value' => null,

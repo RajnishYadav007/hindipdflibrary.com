@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasTranslations;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -65,5 +66,13 @@ class Author extends Model
     public function seoMeta(): MorphOne
     {
         return $this->morphOne(SeoMeta::class, 'seoable');
+    }
+
+    /**
+     * Scope a query to only include active authors.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
     }
 }

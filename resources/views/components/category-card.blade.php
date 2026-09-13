@@ -16,7 +16,7 @@
                        ?? $category->translations->where('locale', 'en')->first()?->description);
         
         $bookCount = $bookCount ?? $category->books_count ?? ($category->books ? $category->books->count() : null);
-        $url = $url !== '#' ? $url : url('/categories/' . $category->slug);
+        $url = $url !== '#' ? $url : route('categories.show', $category->slug);
     }
 @endphp
 
