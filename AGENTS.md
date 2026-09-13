@@ -16,42 +16,82 @@
 1. **INSPECT BEFORE IMPLEMENTING:** Always check existing files, schema, and tests before creating new ones.
 2. **VERIFY BEFORE ASSUMING:** Never assume infrastructure capabilities (e.g., Redis, persistent workers, Meilisearch) exist unless confirmed in `docs/architecture/`.
 3. **PRODUCTION SAFETY FIRST:** Never run destructive commands (`rm -rf`, `DROP DATABASE`, `migrate:fresh`, `git reset --hard`) without explicit, documented user authorization.
-4. **NO OVER-ENGINEERING:** Prefer native Laravel conventions and built-in features over unnecessary third-party packages or complex microservices.
+4. **NO OVER-ENGINEERING:** Prefer native Laravel conventions and built-in features over unnecessary third-party packages, complex microservices, or redundant repository abstractions.
 5. **SEO & MULTILINGUAL FIRST:** Hindi PDF Library is an SEO-heavy digital library. Every public URL, slug, meta tag, and database query must respect English/Hindi multilingual SEO.
 
 ---
 
-## 2. Architecture Principles
+## 2. Architecture Principles & Layer Responsibilities
 
-1. **Shared-Hosting Compatible V1:**
+```
+Presentation (Controllers, Livewire, Filament, Console)
+    ↓
+Application (Actions, Services, Policies, Form Requests)
+    ↓
+Domain / Persistence (Eloquent Models, Scopes, MySQL)
+```
+
+1. **Unidirectional Dependency:** Presentation calls Application Actions/Services; Actions/Services interact with Models and DB. Models never depend on HTTP, session, or Livewire state.
+2. **Shared-Hosting Compatible V1:**
    - No daemon requirements (no Supervisor, no background workers running infinitely).
-   - Queue jobs must use `QUEUE_CONNECTION=database` with `--stop-when-empty` cron execution.
-   - Cache must use `CACHE_STORE=file` or `CACHE_STORE=database` via Laravel's Cache facade. No direct `Redis::` calls.
-   - Search must use MySQL 8 `FULLTEXT` natural language boolean queries in V1.
-2. **Clean Abstractions:**
-   - Always code against Laravel interfaces (`Illuminate\Contracts\...`).
+   - Queue jobs use `QUEUE_CONNECTION=database` with `--stop-when-empty` cron execution.
+   - Cache uses `CACHE_STORE=file` or `CACHE_STORE=database` via Laravel's Cache facade. Zero direct `Redis::` calls.
+   - Search uses MySQL 8 `FULLTEXT` natural language boolean queries in V1.
+3. **Clean Abstractions Without Over-Engineering:**
+   - Always code against standard Laravel interfaces (`Illuminate\Contracts\...`).
    - When VPS/Cloud migration occurs, changing `.env` must be sufficient with zero code refactoring.
-3. **Database-Driven Multilingual Architecture:**
-   - Support English and Hindi (Devanagari script) seamlessly.
-   - Titles and authors must store both original and transliterated phonetic text for search indexing.
+4. **No Future Feature Creep Rule:**
+   - NEVER implement future business features (e.g., books, authors, categories, reviews, analytics, sitemaps) ahead of the designated project phase. Implement ONLY what the user requests for the active phase.
 
 ---
 
-## 3. Laravel Coding & Naming Conventions
+## 3. Layer Coding & Engineering Standards
 
-1. **Models & Schema:**
-   - Singular PascalCase for models (`Book`, `Author`, `Category`).
-   - Plural snake_case for tables (`books`, `authors`, `categories`).
-   - Foreign keys: `singular_model_id` (`author_id`, `category_id`).
-   - Always declare `$fillable` or `$guarded = []` explicitly.
-   - Always declare type hints and return types on model relationships (`public function author(): BelongsTo`).
-2. **Controllers & Livewire Components:**
-   - Single-responsibility controllers (`BookController`, `BookDownloadController`).
-   - Livewire components reside in `app/Livewire/` (e.g., `App\Livewire\BookSearch`, `App\Livewire\ReviewForm`).
-   - Use Form Requests for request validation (`StoreBookRequest`).
-3. **Filament Resources:**
-   - Reside in `app/Filament/Resources/`.
-   - Never put heavy business logic in resource files; delegate to dedicated services or action classes.
+### 3.1. Controllers (Thin Controllers)
+- Controllers must ONLY: accept request, authorize, call an Action or Service, and return a View or RedirectResponse.
+- Controllers must NEVER: contain raw SQL, multi-step business pipelines, file processing, or SEO generation algorithms.
+
+### 3.2. Actions (`app/Actions/`)
+- Encapsulate a single, discrete business mutation (e.g., `CreateBook`, `PublishReview`).
+- Must have one clear entry point (`handle()`), explicit typed inputs, and explicit return types.
+- Completely decoupled from `Request`, `Session`, or Livewire component state.
+
+### 3.3. Services (`app/Services/`)
+- Reserved for cohesive, cross-cutting technical subsystems (e.g., `app/Services/SEO/`, `app/Services/Analytics/`, `app/Services/Media/`).
+- Do NOT create a service for every model (`UserService`, `AuthorService` are prohibited). Use Actions for discrete operations.
+
+### 3.4. Policies (`app/Policies/`)
+- Centralized server-side authorization. Never rely solely on hidden UI buttons or Blade `@can` for security.
+- Every state-modifying action must authorize via Policy (`$this->authorize(...)` or `Gate::authorize(...)`).
+
+### 3.5. Form Requests (`app/Http/Requests/`)
+- Encapsulate validation and authorization for non-trivial HTTP endpoints.
+- Avoid large `$request->validate([...])` blocks inside controllers.
+
+### 3.6. Models & Persistence (`app/Models/`)
+- Eloquent Models handle relational persistence, casts, relationships, and local query scopes.
+- Models must NEVER become God Classes containing email dispatch, PDF streaming, or HTTP responses.
+- **NO REPOSITORIES:** Do NOT write `BookRepository` or `UserRepository`. Use Eloquent and Laravel Query Builder directly.
+
+### 3.7. Livewire Components (`app/Livewire/`)
+- Livewire components are presentation-layer UI boundaries for the public site.
+- Components must delegate business mutations to Action classes, never writing business logic directly in component methods.
+
+### 3.8. Filament Admin (`app/Filament/`)
+- Filament 5 is strictly for administrative back-office functionality (`/admin`).
+- Public frontend code must never import or depend on Filament resources.
+- Access to the panel is protected by `FilamentUser` contract requiring `is_admin === true`.
+
+### 3.9. Routes & Naming Standards
+- Standard route files: `routes/web.php`, `routes/auth.php`, `routes/console.php`.
+- URLs: clean, lowercase kebab-case (`/forgot-password`).
+- Route Names: every route must have an explicit lowercase name (`route('home')`, `route('login')`).
+- Never hardcode URLs in controllers, views, or Livewire components.
+
+### 3.10. Dependency Injection & Configuration
+- Prefer constructor or method injection over global static helpers.
+- Laravel facades are acceptable and idiomatic where appropriate.
+- Access environment configuration via `config('app.name')`. Never call `env(...)` in application classes (returns `null` when config is cached).
 
 ---
 
@@ -107,6 +147,7 @@
 Before declaring any feature or workstream complete:
 1. Code follows PSR-12 formatting (`php artisan pint` or `vendor/bin/pint`).
 2. Automated tests pass (`php artisan test`).
-3. Documentation updated in `docs/`.
-4. No console errors or unresolved PHP deprecation warnings.
-5. Production safety verified (no secrets committed, no hardcoded URLs).
+3. Architecture tests pass (`php artisan test --testsuite=Architecture`).
+4. Documentation updated in `docs/`.
+5. No console errors or unresolved PHP deprecation warnings.
+6. Production safety verified (no secrets committed, no hardcoded URLs).

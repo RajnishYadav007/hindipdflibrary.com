@@ -20,7 +20,7 @@
     <header class="border-b border-slate-200 bg-white shadow-xs">
         <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
             <div class="flex items-center space-x-3">
-                <a href="{{ url('/') }}" class="text-xl font-bold tracking-tight text-slate-900 hover:text-amber-600 transition">
+                <a href="{{ route('home') }}" class="text-xl font-bold tracking-tight text-slate-900 hover:text-amber-600 transition">
                     {{ config('app.name', 'Hindi PDF Library') }}
                 </a>
                 <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
@@ -30,7 +30,7 @@
 
             <!-- Header Navigation -->
             <nav class="flex items-center space-x-4 text-sm font-medium">
-                <a href="{{ url('/') }}" class="text-slate-600 hover:text-slate-900 transition">
+                <a href="{{ route('home') }}" class="text-slate-600 hover:text-slate-900 transition">
                     Home
                 </a>
 

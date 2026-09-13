@@ -1,58 +1,90 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Hindi PDF Library (`hindipdflibrary.com`)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Modern, high-performance digital book and literature discovery platform migrating from WordPress to a custom Laravel 13 architecture.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 1. Technology Stack
+- **Backend:** Laravel 13 (`laravel/framework` v13.31.0)
+- **PHP:** PHP 8.4+ (8.5.8 local CLI, 8.4.25 production Apache)
+- **Database:** MySQL 8.0+ / MariaDB (`utf8mb4_unicode_ci` for full Hindi Devanagari script support)
+- **Frontend:** Blade + Livewire 4 (`livewire/livewire` v4.4.4) + Tailwind CSS 3
+- **Administration:** Filament 5 (`filament/filament` v5.8.1)
+- **Authentication:** Laravel Breeze with Livewire stack
+- **Build Tool:** Vite v7.3.6
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 2. Architecture & Documentation
+Detailed architectural blueprints and decision records reside in `docs/`:
+- **Phase 0 Baseline:** [`docs/PHASE_0_FINAL_REPORT.md`](docs/PHASE_0_FINAL_REPORT.md) and [`docs/architecture/`](docs/architecture/)
+- **Phase 1 Foundation:** [`docs/phase-1/PHASE_1_IMPLEMENTATION.md`](docs/phase-1/PHASE_1_IMPLEMENTATION.md)
+- **Phase 2 Architecture:** [`docs/phase-2/`](docs/phase-2/)
+  - [Architecture Baseline](docs/phase-2/ARCHITECTURE_BASELINE.md)
+  - [Architecture Decisions & Layers](docs/phase-2/ARCHITECTURE_DECISION.md)
+  - [Dependency Injection & Persistence Rules](docs/phase-2/DEPENDENCY_RULES.md)
+  - [Error & Exception Handling](docs/phase-2/ERROR_HANDLING.md)
+  - [Testing Architecture](docs/phase-2/TESTING_ARCHITECTURE.md)
+  - [Architectural Guardrails](docs/phase-2/ARCHITECTURAL_GUARDRAILS.md)
+- **AI Developer Standards:** [`AGENTS.md`](AGENTS.md) (Mandatory reading for human and AI engineers)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 3. Local Development Setup
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 3.1. Prerequisites
+- PHP 8.4 or higher with `pdo_mysql`, `mbstring`, `intl`, and `gd` extensions enabled.
+- Composer 2.2+
+- Node.js 18+ and NPM 9+
+- MySQL 8.0+ / MariaDB service running on `127.0.0.1:3306`
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+### 3.2. Installation Steps
 ```bash
-composer require laravel/boost --dev
+# 1. Clone the repository
+git clone <repository-url> hindipdflibrary
+cd hindipdflibrary
 
-php artisan boost:install
+# 2. Install PHP dependencies
+composer install
+
+# 3. Configure environment
+cp .env.example .env
+php artisan key:generate
+
+# 4. Configure local database credentials in .env and run migrations
+php artisan migrate
+
+# 5. Install and compile frontend assets
+npm install
+npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 4. Development & Testing Commands
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+# Run local development server
+php artisan serve
 
-## Code of Conduct
+# Run Vite asset compiler in watch mode
+npm run dev
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Compile assets for production
+npm run build
 
-## Security Vulnerabilities
+# Run all automated test suites (Unit, Feature, Architecture)
+php artisan test
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Run only architectural boundary enforcement tests
+php artisan test --testsuite=Architecture
 
-## License
+# Inspect application routing
+php artisan route:list
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 5. Administration Access
+- The administration panel is located at `/admin`.
+- Panel access is governed by the `FilamentUser` contract on `App\Models\User` and strictly requires `is_admin === true`.
