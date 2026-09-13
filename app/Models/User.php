@@ -39,4 +39,29 @@ class User extends Authenticatable implements FilamentUser
             'is_admin' => 'boolean',
         ];
     }
+
+    /**
+     * Reviews written by the user.
+     */
+    public function reviews(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Favorites saved by the user.
+     */
+    public function favorites(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /**
+     * Books favorited by the user.
+     */
+    public function favoriteBooks(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Book::class, 'favorites');
+    }
 }
+
