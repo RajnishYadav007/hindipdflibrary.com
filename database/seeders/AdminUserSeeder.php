@@ -15,7 +15,7 @@ class AdminUserSeeder extends Seeder
             ['email' => 'superadmin@example.com'],
             [
                 'name' => 'Lead Super Administrator',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('Password123!'),
                 'is_admin' => true,
                 'email_verified_at' => now(),
             ]
@@ -27,7 +27,7 @@ class AdminUserSeeder extends Seeder
             ['email' => 'admin@example.com'],
             [
                 'name' => 'Library Administrator',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('Password123!'),
                 'is_admin' => true,
                 'email_verified_at' => now(),
             ]
@@ -39,7 +39,7 @@ class AdminUserSeeder extends Seeder
             ['email' => 'editor@example.com'],
             [
                 'name' => 'Content Editor',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('Password123!'),
                 'is_admin' => false,
                 'email_verified_at' => now(),
             ]
@@ -51,7 +51,7 @@ class AdminUserSeeder extends Seeder
             ['email' => 'moderator@example.com'],
             [
                 'name' => 'Community Moderator',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('Password123!'),
                 'is_admin' => false,
                 'email_verified_at' => now(),
             ]
