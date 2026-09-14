@@ -10,6 +10,7 @@ use App\Support\Analytics\AnalyticsEvent;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class BookController extends Controller
@@ -96,6 +97,22 @@ class BookController extends Controller
             abort(404);
         }
 
+        // If book is external source only, redirect safely to official source
+        if ($book->hasExternalSourceOnly()) {
+            $safeUrl = $book->getSafeSourceUrl();
+            if ($safeUrl) {
+                app(AnalyticsService::class)->captureFromRequest($request, AnalyticsEvent::BOOK_READ, [
+                    'book_id' => $book->id,
+                ]);
+
+                return redirect()->away($safeUrl);
+            }
+        }
+
+        if (! $book->canDownloadPdf()) {
+            abort(403, 'Reading is not permitted for this title.');
+        }
+
         app(AnalyticsService::class)->captureFromRequest($request, AnalyticsEvent::BOOK_READ, [
             'book_id' => $book->id,
         ]);
@@ -104,7 +121,7 @@ class BookController extends Controller
     }
 
     /**
-     * Download action capturing book_download analytics.
+     * Download action enforcing legal rights and streaming private PDFs.
      */
     public function download(Request $request, string $localeOrSlug, ?string $slug = null): BinaryFileResponse|RedirectResponse
     {
@@ -116,20 +133,57 @@ class BookController extends Controller
             abort(404);
         }
 
-        $book->incrementQuietly('downloads_count');
+        // Strict legal & content-rights check
+        if (! $book->canDownloadPdf()) {
+            abort(403, 'Direct file download is not permitted for this title.');
+        }
+
+        // Locate PDF media record or direct file on private_pdfs disk
+        $pdfMedia = $book->media->where('collection_name', 'pdf')->first()
+            ?? $book->media->filter(fn ($m) => str_contains($m->mime_type ?? '', 'pdf'))->first();
+
+        $resolvedPath = null;
+        if ($pdfMedia) {
+            $disk = $pdfMedia->disk ?: 'private_pdfs';
+            $relative = $pdfMedia->file_path ?: $pdfMedia->file_name;
+            if (Storage::disk($disk)->exists($relative)) {
+                $resolvedPath = Storage::disk($disk)->path($relative);
+            } elseif (file_exists(storage_path('app/private_pdfs/'.$pdfMedia->file_name))) {
+                $resolvedPath = storage_path('app/private_pdfs/'.$pdfMedia->file_name);
+            } elseif (! empty($pdfMedia->file_path) && file_exists(storage_path('app/'.$pdfMedia->file_path))) {
+                $resolvedPath = storage_path('app/'.$pdfMedia->file_path);
+            }
+        } elseif (Storage::disk('private_pdfs')->exists("books/{$book->slug}.pdf")) {
+            $resolvedPath = Storage::disk('private_pdfs')->path("books/{$book->slug}.pdf");
+        } elseif (Storage::disk('private_pdfs')->exists("{$book->slug}.pdf")) {
+            $resolvedPath = Storage::disk('private_pdfs')->path("{$book->slug}.pdf");
+        } elseif (! empty($book->pdf_path) && Storage::disk('private_pdfs')->exists($book->pdf_path)) {
+            $resolvedPath = Storage::disk('private_pdfs')->path($book->pdf_path);
+        }
+
+        if (! $resolvedPath || ! file_exists($resolvedPath)) {
+            abort(404, 'PDF file is not available on storage disk.');
+        }
+
+        // Verify magic bytes
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $resolvedPath);
+        finfo_close($finfo);
+
+        if ($mime !== 'application/pdf') {
+            abort(415, 'Invalid digital media format.');
+        }
 
         app(AnalyticsService::class)->captureFromRequest($request, AnalyticsEvent::BOOK_DOWNLOAD, [
             'book_id' => $book->id,
         ]);
 
-        $pdfMedia = $book->media->where('collection_name', 'pdf')->first()
-            ?? $book->media->filter(fn ($m) => str_contains($m->mime_type ?? '', 'pdf'))->first();
+        $downloadName = ($book->slug ?: 'book').'.pdf';
 
-        if ($pdfMedia && file_exists(storage_path('app/'.$pdfMedia->file_path))) {
-            return response()->download(storage_path('app/'.$pdfMedia->file_path), $pdfMedia->file_name);
-        }
-
-        return redirect()->route('books.show', ['slug' => $book->slug])
-            ->with('status', 'Download initiated.');
+        return response()->file($resolvedPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.addslashes($downloadName).'"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }

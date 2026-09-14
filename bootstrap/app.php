@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\CaptureAnalyticsEvent;
+use App\Http\Middleware\HandleRedirects;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(SecurityHeaders::class);
+        $middleware->append(HandleRedirects::class);
+
         $middleware->web(append: [
             SetLocale::class,
             CaptureAnalyticsEvent::class,
@@ -21,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'set.locale' => SetLocale::class,
             'analytics.capture' => CaptureAnalyticsEvent::class,
+            'security.headers' => SecurityHeaders::class,
+            'handle.redirects' => HandleRedirects::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

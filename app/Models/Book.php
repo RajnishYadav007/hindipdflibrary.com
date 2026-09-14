@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\BookStatus;
+use App\Enums\CopyrightStatus;
 use App\Models\Concerns\HasTranslations;
+use App\Support\Security\SafeUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,6 +45,7 @@ class Book extends Model
     {
         return [
             'status' => BookStatus::class,
+            'copyright_status' => CopyrightStatus::class,
             'publication_year' => 'integer',
             'pages' => 'integer',
             'rating_average' => 'decimal:2',
@@ -154,5 +157,49 @@ class Book extends Model
     public function isPublished(): bool
     {
         return $this->status === BookStatus::Published;
+    }
+
+    /**
+     * Whether the platform is legally permitted to store a private PDF for this book.
+     */
+    public function canHostPdf(): bool
+    {
+        if ($this->copyright_status instanceof CopyrightStatus) {
+            return $this->copyright_status->canHostPdf();
+        }
+
+        if (! empty($this->copyright_status)) {
+            return CopyrightStatus::tryFrom((string) $this->copyright_status)?->canHostPdf() ?? false;
+        }
+
+        // When copyright_status is not explicitly set, permit hosting if local PDF media is attached
+        return $this->relationLoaded('media')
+            ? $this->media->contains(fn ($m) => $m->collection_name === 'pdf' || str_contains($m->mime_type ?? '', 'pdf'))
+            : $this->media()->where('collection_name', 'pdf')->orWhere('mime_type', 'like', '%pdf%')->exists();
+    }
+
+    /**
+     * Whether readers are legally permitted to download the PDF file directly.
+     */
+    public function canDownloadPdf(): bool
+    {
+        return $this->isPublished() && $this->canHostPdf();
+    }
+
+    /**
+     * Whether this book is strictly an external referral/discovery record without local hosting.
+     */
+    public function hasExternalSourceOnly(): bool
+    {
+        return $this->copyright_status === CopyrightStatus::ExternalSourceOnly
+            || (string) $this->copyright_status === 'external_source_only';
+    }
+
+    /**
+     * Get validated, safe source URL. Returns null if unsafe or invalid.
+     */
+    public function getSafeSourceUrl(): ?string
+    {
+        return SafeUrl::sanitize($this->source_url);
     }
 }

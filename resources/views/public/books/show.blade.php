@@ -84,13 +84,11 @@
                             </div>
                         </div>
 
-                        <!-- Truthful Call-To-Action Area -->
+                        <!-- Truthful Call-To-Action Area with Legal Rights Verification -->
                         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3 text-center">
-                            @if ($pdfMedia)
+                            @if ($book->canDownloadPdf() && $pdfMedia)
                                 <a 
-                                    href="{{ asset('storage/' . $pdfMedia->file_name) }}" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
+                                    href="{{ route('books.download', ['slug' => $book->slug]) }}" 
                                     class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-800 transition focus-visible:outline-2 focus-visible:outline-brand-700"
                                 >
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -99,11 +97,11 @@
                                     Read / Download PDF
                                 </a>
                                 <p class="text-[11px] text-slate-500">
-                                    Format: PDF • {{ $pdfMedia->size ? round($pdfMedia->size / 1048576, 1) . ' MB' : 'Digital Document' }}
+                                    Format: PDF • {{ $pdfMedia->file_name }} ({{ $pdfMedia->size ? round($pdfMedia->size / 1048576, 1) . ' MB' : 'Authorized Edition' }})
                                 </p>
-                            @elseif ($book->source_url)
+                            @elseif ($book->getSafeSourceUrl())
                                 <a 
-                                    href="{{ $book->source_url }}" 
+                                    href="{{ $book->getSafeSourceUrl() }}" 
                                     target="_blank" 
                                     rel="noopener noreferrer nofollow"
                                     class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-amber-800 transition focus-visible:outline-2 focus-visible:outline-amber-700"
@@ -114,7 +112,7 @@
                                     Access at Primary Source
                                 </a>
                                 <p class="text-[11px] text-slate-500">
-                                    Curated Archive Link • External Digital Archive
+                                    Official External Archive • Verified Primary Repository
                                 </p>
                             @else
                                 <div class="rounded-lg bg-slate-50 border border-slate-200 p-3">

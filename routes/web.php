@@ -26,7 +26,9 @@ Route::prefix('{locale}')
 
         // Localized Book Actions
         Route::get('/book/{slug}/read', [BookController::class, 'read'])->name('books.read');
-        Route::get('/book/{slug}/download', [BookController::class, 'download'])->name('books.download');
+        Route::get('/book/{slug}/download', [BookController::class, 'download'])
+            ->middleware('throttle:downloads')
+            ->name('books.download');
 
         // Localized Book Detail (canonical singular & plural alias)
         Route::get('/book/{slug}', [BookController::class, 'show'])->name('books.show');
@@ -41,14 +43,16 @@ Route::prefix('{locale}')
         Route::get('/categories/{slug}', [CategoryController::class, 'show'])->name('categories.plural.show');
 
         // Localized Search & Discovery
-        Route::get('/search', [SearchController::class, 'index'])->name('search');
+        Route::get('/search', [SearchController::class, 'index'])
+            ->middleware('throttle:search')
+            ->name('search');
     });
 
 // Unprefixed Routes (Phase 6 backwards-compatibility)
 Route::get('/', HomeController::class)->name('home.root');
 
 Route::get('/books/{slug}/read', [BookController::class, 'read']);
-Route::get('/books/{slug}/download', [BookController::class, 'download']);
+Route::get('/books/{slug}/download', [BookController::class, 'download'])->middleware('throttle:downloads');
 Route::get('/books/{slug}', [BookController::class, 'show']);
 Route::get('/book/{slug}', fn (string $slug) => redirect("/books/{$slug}", 301));
 
@@ -58,7 +62,9 @@ Route::get('/author/{slug}', fn (string $slug) => redirect("/authors/{$slug}", 3
 Route::get('/categories/{slug}', [CategoryController::class, 'show']);
 Route::get('/category/{slug}', fn (string $slug) => redirect("/categories/{$slug}", 301));
 
-Route::get('/search', [SearchController::class, 'index'])->name('search.root');
+Route::get('/search', [SearchController::class, 'index'])
+    ->middleware('throttle:search')
+    ->name('search.root');
 
 // User Profile & Dashboard
 Route::view('dashboard', 'dashboard')
