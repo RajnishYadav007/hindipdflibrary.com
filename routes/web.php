@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [RobotsController::class, 'index'])->name('robots');
 
+// Search click tracking route (302 redirects to book)
+Route::get('/search/click', [SearchController::class, 'click'])->name('search.click');
+
 // Localized Public Content Routes (/{locale}/...)
 Route::prefix('{locale}')
     ->where(['locale' => '[a-z]{2}'])
@@ -20,6 +23,10 @@ Route::prefix('{locale}')
     ->group(function () {
         // Localized Homepage
         Route::get('/', HomeController::class)->name('home');
+
+        // Localized Book Actions
+        Route::get('/book/{slug}/read', [BookController::class, 'read'])->name('books.read');
+        Route::get('/book/{slug}/download', [BookController::class, 'download'])->name('books.download');
 
         // Localized Book Detail (canonical singular & plural alias)
         Route::get('/book/{slug}', [BookController::class, 'show'])->name('books.show');
@@ -40,6 +47,8 @@ Route::prefix('{locale}')
 // Unprefixed Routes (Phase 6 backwards-compatibility)
 Route::get('/', HomeController::class)->name('home.root');
 
+Route::get('/books/{slug}/read', [BookController::class, 'read']);
+Route::get('/books/{slug}/download', [BookController::class, 'download']);
 Route::get('/books/{slug}', [BookController::class, 'show']);
 Route::get('/book/{slug}', fn (string $slug) => redirect("/books/{$slug}", 301));
 

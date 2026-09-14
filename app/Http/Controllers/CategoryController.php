@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Services\Analytics\AnalyticsService;
 use App\Services\SEO\SeoManager;
+use App\Support\Analytics\AnalyticsEvent;
 use Illuminate\Contracts\View\View;
 
 class CategoryController extends Controller
@@ -22,6 +24,11 @@ class CategoryController extends Controller
         if (! $category->is_active) {
             abort(404);
         }
+
+        // Capture category_view analytics event safely
+        app(AnalyticsService::class)->captureFromRequest(request(), AnalyticsEvent::CATEGORY_VIEW, [
+            'category_id' => $category->id,
+        ]);
 
         $subcategories = $category->children()
             ->active()

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Author;
+use App\Services\Analytics\AnalyticsService;
 use App\Services\SEO\SeoManager;
+use App\Support\Analytics\AnalyticsEvent;
 use Illuminate\Contracts\View\View;
 
 class AuthorController extends Controller
@@ -22,6 +24,11 @@ class AuthorController extends Controller
         if (! $author->is_active) {
             abort(404);
         }
+
+        // Capture author_view analytics event safely
+        app(AnalyticsService::class)->captureFromRequest(request(), AnalyticsEvent::AUTHOR_VIEW, [
+            'author_id' => $author->id,
+        ]);
 
         $books = $author->books()
             ->published()

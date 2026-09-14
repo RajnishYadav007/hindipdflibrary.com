@@ -49,4 +49,14 @@ class BookFactory extends Factory
             'status' => BookStatus::Draft,
         ]);
     }
+
+    /**
+     * Indicate that the book is in published status.
+     */
+    public function published(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => BookStatus::Published,
+        ]);
+    }
 }

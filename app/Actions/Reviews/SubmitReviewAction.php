@@ -7,6 +7,8 @@ use App\Enums\ReviewStatus;
 use App\Models\Book;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\Analytics\AnalyticsService;
+use App\Support\Analytics\AnalyticsEvent;
 use InvalidArgumentException;
 
 class SubmitReviewAction
@@ -73,6 +75,21 @@ class SubmitReviewAction
 
         // Recalculate metrics for the book
         $this->recalculateMetrics->handle($book);
+
+        // Record first-party analytics events
+        $analytics = app(AnalyticsService::class);
+        $analytics->record(AnalyticsEvent::RATING_SUBMITTED, [
+            'user_id' => $user->id,
+            'book_id' => $book->id,
+            'metadata' => ['rating' => $rating],
+        ]);
+
+        if ($sanitizedTitle || $sanitizedBody) {
+            $analytics->record(AnalyticsEvent::REVIEW_SUBMITTED, [
+                'user_id' => $user->id,
+                'book_id' => $book->id,
+            ]);
+        }
 
         return $review;
     }

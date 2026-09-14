@@ -72,6 +72,9 @@ class RoleAndPermissionSeeder extends Seeder
             'redirects.create',
             'redirects.update',
             'redirects.delete',
+
+            // Analytics & Intelligence
+            'analytics.view',
         ];
 
         foreach ($permissions as $permission) {
@@ -94,6 +97,7 @@ class RoleAndPermissionSeeder extends Seeder
             'media.view', 'media.upload', 'media.update', 'media.delete',
             'seo.view', 'seo.update',
             'redirects.view', 'redirects.create', 'redirects.update', 'redirects.delete',
+            'analytics.view',
         ]);
 
         // 3. Editor Role (Content creation and publishing)

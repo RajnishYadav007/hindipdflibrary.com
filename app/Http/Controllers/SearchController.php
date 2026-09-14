@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Contracts\Search\SearchEngineInterface;
 use App\Models\Author;
+use App\Models\Book;
 use App\Models\Category;
 use App\Models\Genre;
 use App\Models\Language;
+use App\Services\Analytics\AnalyticsService;
 use App\Services\Discovery\BookDiscoveryService;
 use App\Services\SEO\SeoManager;
+use App\Support\Analytics\AnalyticsEvent;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
@@ -45,6 +49,14 @@ class SearchController extends Controller
         $books = $this->searchEngine->search($query, $locale, $filters, 12);
         $books->appends($request->query());
 
+        // Capture search event when a query is provided
+        if ($query !== '') {
+            app(AnalyticsService::class)->captureFromRequest($request, AnalyticsEvent::SEARCH, [
+                'search_query' => $query,
+                'search_result_count' => $books->total(),
+            ]);
+        }
+
         // Empty results discovery suggestions
         $suggestedBooks = $books->isEmpty()
             ? $this->discoveryService->popularBooks(4)
@@ -74,5 +86,23 @@ class SearchController extends Controller
             'languages',
             'seo'
         ));
+    }
+
+    /**
+     * Track user click on a book from search results and redirect to the book page.
+     */
+    public function click(Request $request): RedirectResponse
+    {
+        $bookId = $request->integer('book_id');
+        $query = trim($request->string('q')->toString());
+
+        $book = Book::where('id', $bookId)->firstOrFail();
+
+        app(AnalyticsService::class)->captureFromRequest($request, AnalyticsEvent::SEARCH_RESULT_CLICK, [
+            'book_id' => $book->id,
+            'search_query' => $query ?: null,
+        ]);
+
+        return redirect()->route('books.show', ['slug' => $book->slug]);
     }
 }
