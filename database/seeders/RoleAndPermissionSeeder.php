@@ -81,6 +81,8 @@ class RoleAndPermissionSeeder extends Seeder
             Permission::findOrCreate($permission, 'web');
         }
 
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
         // 1. Super Admin Role
         $superAdmin = Role::findOrCreate('Super Admin', 'web');
 

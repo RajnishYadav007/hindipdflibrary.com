@@ -37,6 +37,22 @@ class Category extends Model
     }
 
     /**
+     * Get the resolved category name for the active locale.
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->localized()?->name ?? $this->slug;
+    }
+
+    /**
+     * Get the resolved description for the active locale.
+     */
+    public function getDescriptionAttribute(): ?string
+    {
+        return $this->localized()?->description;
+    }
+
+    /**
      * Parent category in hierarchy.
      */
     public function parent(): BelongsTo

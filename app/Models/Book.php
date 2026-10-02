@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\BookStatus;
 use App\Enums\CopyrightStatus;
 use App\Models\Concerns\HasTranslations;
+use App\Services\Archive\ArchiveOrgService;
 use App\Support\Security\SafeUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,6 +22,7 @@ class Book extends Model
     use HasFactory, HasTranslations, SoftDeletes;
 
     protected $fillable = [
+        'user_id',
         'slug',
         'status',
         'publication_year',
@@ -34,6 +36,8 @@ class Book extends Model
         'rating_count',
         'review_count',
         'view_count',
+        'content_type',
+        'deity',
         'source_url',
         'license_type',
         'rights_holder',
@@ -58,6 +62,46 @@ class Book extends Model
     protected function getTranslationModelName(): string
     {
         return BookTranslation::class;
+    }
+
+    /**
+     * Get the resolved title for the active locale.
+     */
+    public function getTitleAttribute(): ?string
+    {
+        return $this->localized()?->title ?? $this->slug;
+    }
+
+    /**
+     * Get the resolved description for the active locale.
+     */
+    public function getDescriptionAttribute(): ?string
+    {
+        return $this->localized()?->description;
+    }
+
+    /**
+     * Get the cover image URL or fall back to null.
+     */
+    public function getCoverUrlAttribute(): ?string
+    {
+        $coverMedia = $this->relationLoaded('media')
+            ? ($this->media->firstWhere('collection_name', 'cover') ?? $this->media->filter(fn ($m) => str_contains($m->mime_type ?? '', 'image'))->first())
+            : $this->media()->where('collection_name', 'cover')->first();
+
+        if ($coverMedia) {
+            return asset('storage/'.$coverMedia->file_name);
+        }
+
+        if (! empty($this->source_url)) {
+            $archiveService = app(ArchiveOrgService::class);
+            $identifier = $archiveService->extractIdentifier($this->source_url);
+            if ($identifier) {
+                return "https://archive.org/services/img/{$identifier}";
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -101,6 +145,36 @@ class Book extends Model
     public function languages(): BelongsToMany
     {
         return $this->belongsToMany(Language::class, 'book_languages')->withTimestamps();
+    }
+
+    /**
+     * User who contributed or submitted the book.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Alias for uniform submitter relation across all content systems.
+     */
+    public function submitter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get user-facing moderation feedback safely.
+     * Internal notes are never exposed on pending/draft items.
+     */
+    public function getUserFacingFeedbackAttribute(): ?string
+    {
+        $statusVal = is_object($this->status) ? ($this->status->value ?? (string) $this->status) : (string) $this->status;
+        if (in_array($statusVal, ['rejected', 'revision_required'])) {
+            return $this->permission_notes ? htmlspecialchars(trim((string) $this->permission_notes), ENT_QUOTES, 'UTF-8') : null;
+        }
+
+        return null;
     }
 
     /**
@@ -169,7 +243,11 @@ class Book extends Model
         }
 
         if (! empty($this->copyright_status)) {
-            return CopyrightStatus::tryFrom((string) $this->copyright_status)?->canHostPdf() ?? false;
+            $val = is_object($this->copyright_status) && isset($this->copyright_status->value)
+                ? $this->copyright_status->value
+                : (string) $this->copyright_status;
+
+            return CopyrightStatus::tryFrom($val)?->canHostPdf() ?? false;
         }
 
         // When copyright_status is not explicitly set, permit hosting if local PDF media is attached
@@ -191,8 +269,11 @@ class Book extends Model
      */
     public function hasExternalSourceOnly(): bool
     {
-        return $this->copyright_status === CopyrightStatus::ExternalSourceOnly
-            || (string) $this->copyright_status === 'external_source_only';
+        if ($this->copyright_status instanceof CopyrightStatus) {
+            return $this->copyright_status === CopyrightStatus::ExternalSourceOnly;
+        }
+
+        return $this->copyright_status === 'external_source_only';
     }
 
     /**
@@ -201,5 +282,60 @@ class Book extends Model
     public function getSafeSourceUrl(): ?string
     {
         return SafeUrl::sanitize($this->source_url);
+    }
+
+    /**
+     * Determine if this content item is a devotional prayer (Chalisa, Aarti, Stotra, etc.).
+     */
+    public function isPrayer(): bool
+    {
+        if (in_array($this->content_type, ['chalisa', 'aarti', 'stotra', 'mantra', 'suktam'], true)) {
+            return true;
+        }
+
+        return ! empty($this->localized()?->lyrics);
+    }
+
+    /**
+     * Determine if this content item is a standard book / scripture.
+     */
+    public function isBook(): bool
+    {
+        return ! $this->isPrayer();
+    }
+
+    /**
+     * Human-friendly label for the content type.
+     */
+    public function getTypeLabelAttribute(): string
+    {
+        return match ($this->content_type) {
+            'chalisa' => 'चालीसा (Chalisa)',
+            'aarti' => 'आरती (Aarti)',
+            'stotra' => 'स्तोत्र / पाठ (Stotra)',
+            'mantra' => 'मंत्र (Mantra)',
+            default => 'ग्रंथ / पुस्तक (Book)',
+        };
+    }
+
+    /**
+     * Human-friendly label for the divine entity/deity.
+     */
+    public function getDeityLabelAttribute(): ?string
+    {
+        return match ($this->deity) {
+            'hanuman' => 'श्री हनुमान जी (Lord Hanuman)',
+            'shiva' => 'भगवान शिव (Lord Shiva)',
+            'ram' => 'प्रभु श्री राम (Lord Rama)',
+            'krishna' => 'भगवान श्री कृष्ण (Lord Krishna)',
+            'ganesh' => 'श्री गणेश (Lord Ganesha)',
+            'durga' => 'मां दुर्गा (Maa Durga)',
+            'lakshmi' => 'माता लक्ष्मी (Maa Lakshmi)',
+            'saraswati' => 'माता सरस्वती (Maa Saraswati)',
+            'vishnu' => 'भगवान विष्णु (Lord Vishnu)',
+            'surya' => 'भगवान सूर्य (Lord Surya)',
+            'vedas' => 'वेद एवं उपनिषद् (Vedas & Upanishads)',
+            default => $this->deity ? ucfirst($this->deity) : null,
+        };
     }
 }

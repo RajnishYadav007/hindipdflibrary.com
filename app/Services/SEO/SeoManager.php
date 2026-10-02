@@ -3,6 +3,7 @@
 namespace App\Services\SEO;
 
 use App\Enums\ReviewStatus;
+use App\Models\Audiobook;
 use App\Models\Author;
 use App\Models\Book;
 use App\Models\Category;
@@ -270,6 +271,42 @@ class SeoManager
             ],
             $bookSchema,
         ];
+
+        if ($book->slug === 'hanuman-chalisa') {
+            $structuredData[] = [
+                '@context' => 'https://schema.org',
+                '@type' => 'Article',
+                'headline' => $title,
+                'inLanguage' => $locale,
+                'description' => $seoDescription,
+            ];
+
+            $structuredData[] = [
+                '@context' => 'https://schema.org',
+                '@type' => 'MusicComposition',
+                'name' => $title,
+                'inLanguage' => $locale,
+                'composer' => [
+                    '@type' => 'Person',
+                    'name' => 'गोस्वामी तुलसीदास (Goswami Tulsidas)',
+                ],
+            ];
+
+            $structuredData[] = [
+                '@context' => 'https://schema.org',
+                '@type' => 'FAQPage',
+                'mainEntity' => [
+                    [
+                        '@type' => 'Question',
+                        'name' => 'हनुमान चालीसा किसने लिखी?',
+                        'acceptedAnswer' => [
+                            '@type' => 'Answer',
+                            'text' => 'गोस्वामी तुलसीदास जी के द्वारा 16वीं शताब्दी में अवधी भाषा में हनुमान चालीसा लिखी गई थी।',
+                        ],
+                    ],
+                ],
+            ];
+        }
 
         return new SeoData(
             title: $seoTitle,
@@ -598,5 +635,331 @@ class SeoManager
         ];
 
         return $hreflangs;
+    }
+
+    /**
+     * Build SEO metadata and structured data for the Vedas & Puranas directory hub.
+     */
+    public static function forVedPuran(string $locale): SeoData
+    {
+        $siteName = config('app.name', 'Hindi PDF Library');
+        $isHindi = $locale === 'hi';
+        $title = $isHindi
+            ? "चारों वेद एवं १८ महापुराण पीडीएफ | {$siteName}"
+            : "All 4 Vedas and 18 Puranas in PDF | {$siteName}";
+        $description = $isHindi
+            ? 'चारों पवित्र वेद एवं १८ महापुराणों की प्रामाणिक सूची, विवरण, पीडीएफ एवं ऑडियो।'
+            : 'Download all 4 Vedas and 18 Mahapuranas in Hindi PDF for free.';
+
+        $canonicalUrl = url("/{$locale}/ved-puran");
+        $robots = 'index, follow';
+        $hreflangs = self::buildHomeHreflangs('/ved-puran');
+        $breadcrumbs = [
+            ['label' => 'Home', 'url' => url("/{$locale}")],
+            ['label' => $isHindi ? 'वेद एवं पुराण' : 'Vedas & Puranas', 'url' => null],
+        ];
+
+        $structuredData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Home',
+                        'item' => url("/{$locale}"),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => $isHindi ? 'वेद एवं पुराण' : 'Vedas & Puranas',
+                        'item' => $canonicalUrl,
+                    ],
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'FAQPage',
+                'mainEntity' => [
+                    [
+                        '@type' => 'Question',
+                        'name' => 'चारों वेदों के नाम क्या हैं और इनका क्या महत्व है?',
+                        'acceptedAnswer' => [
+                            '@type' => 'Answer',
+                            'text' => 'सनातन धर्म में चार मुख्य वेद हैं: ऋग्वेद, यजुर्वेद, सामवेद, और अथर्ववेद।',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        return new SeoData(
+            title: $title,
+            description: $description,
+            canonicalUrl: $canonicalUrl,
+            robots: $robots,
+            ogTitle: $title,
+            ogDescription: $description,
+            ogImage: asset('images/og-default.jpg'),
+            ogType: 'website',
+            ogUrl: $canonicalUrl,
+            locale: $locale,
+            twitterCard: 'summary_large_image',
+            twitterTitle: $title,
+            twitterDescription: $description,
+            hreflangs: $hreflangs,
+            breadcrumbs: $breadcrumbs,
+            structuredData: $structuredData,
+        );
+    }
+
+    /**
+     * Build SEO metadata and structured data for the Audiobook Index/Catalogue.
+     */
+    public static function forAudiobookIndex(string $locale): SeoData
+    {
+        $siteName = config('app.name', 'Hindi PDF Library');
+
+        $isHindi = $locale === 'hi';
+        $title = $isHindi
+            ? "ऑडियोबुक्स संग्रह (Hindi Audiobooks) — निःशुल्क सुनें | {$siteName}"
+            : "Hindi Audiobooks Library — Free Audio Recitations | {$siteName}";
+
+        $description = $isHindi
+            ? 'सुनें लोकप्रिय हिन्दी उपन्यास, धार्मिक ग्रन्थ, बाल साहित्य और अमर कहानियों का उच्च गुणवत्ता ऑडियो वाचन।'
+            : "Listen to thousands of classic Hindi books, novels, and religious recitations in high quality audio on {$siteName}.";
+
+        $canonicalUrl = url("/{$locale}/audiobooks");
+        $robots = 'index, follow';
+
+        $hreflangs = self::buildHomeHreflangs('/audiobooks');
+
+        $breadcrumbs = [
+            ['label' => 'Home', 'url' => url("/{$locale}")],
+            ['label' => $isHindi ? 'ऑडियोबुक्स' : 'Audiobooks', 'url' => null],
+        ];
+
+        $structuredData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Home',
+                        'item' => url("/{$locale}"),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => $isHindi ? 'ऑडियोबुक्स' : 'Audiobooks',
+                        'item' => $canonicalUrl,
+                    ],
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'CollectionPage',
+                'name' => $title,
+                'url' => $canonicalUrl,
+                'description' => $description,
+            ],
+        ];
+
+        return new SeoData(
+            title: $title,
+            description: $description,
+            canonicalUrl: $canonicalUrl,
+            robots: $robots,
+            ogTitle: $title,
+            ogDescription: $description,
+            ogImage: asset('images/og-default.jpg'),
+            ogType: 'website',
+            ogUrl: $canonicalUrl,
+            locale: $locale,
+            twitterCard: 'summary_large_image',
+            twitterTitle: $title,
+            twitterDescription: $description,
+            hreflangs: $hreflangs,
+            breadcrumbs: $breadcrumbs,
+            structuredData: $structuredData,
+        );
+    }
+
+    /**
+     * Build SEO metadata and structured data for an Audiobook detail & playback page.
+     */
+    public static function forAudiobook(Audiobook $audiobook, string $locale): SeoData
+    {
+        $siteName = config('app.name', 'Hindi PDF Library');
+
+        $translation = $audiobook->localized($locale) ?? $audiobook->translations->first();
+        $title = $translation?->title ?? $audiobook->slug;
+
+        $isHindi = $locale === 'hi';
+        $seoTitle = "{$title} — ".($isHindi ? 'सम्पूर्ण ऑडियोबुक वाचन' : 'Audiobook')." | {$siteName}";
+
+        $description = ! empty($translation?->description)
+            ? Str::limit(strip_tags($translation->description), 160)
+            : ($isHindi ? "सुनें '{$title}' ऑडियोबुक निःशुल्क ऑनलाइन {$siteName} पर।" : "Listen to '{$title}' audiobook online for free on {$siteName}.");
+
+        $canonicalUrl = url("/{$locale}/audiobooks/{$audiobook->slug}");
+        $robots = $audiobook->isPublished() ? 'index, follow' : 'noindex, nofollow';
+
+        $coverUrl = $audiobook->cover_url;
+
+        $hreflangs = [];
+        $supported = config('localization.supported_locales', ['en' => [], 'hi' => []]);
+        foreach (array_keys($supported) as $loc) {
+            $hreflangs[] = [
+                'locale' => $loc,
+                'url' => url("/{$loc}/audiobooks/{$audiobook->slug}"),
+            ];
+        }
+        $hreflangs[] = [
+            'locale' => 'x-default',
+            'url' => url("/en/audiobooks/{$audiobook->slug}"),
+        ];
+
+        $breadcrumbs = [
+            ['label' => 'Home', 'url' => url("/{$locale}")],
+            ['label' => $isHindi ? 'ऑडियोबुक्स' : 'Audiobooks', 'url' => url("/{$locale}/audiobooks")],
+            ['label' => $title, 'url' => null],
+        ];
+
+        $breadcrumbElements = [
+            [
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => 'Home',
+                'item' => url("/{$locale}"),
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 2,
+                'name' => $isHindi ? 'ऑडियोबुक्स' : 'Audiobooks',
+                'item' => url("/{$locale}/audiobooks"),
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 3,
+                'name' => $title,
+                'item' => $canonicalUrl,
+            ],
+        ];
+
+        $audiobookSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Audiobook',
+            'name' => $title,
+            'description' => $description,
+            'inLanguage' => $locale,
+            'url' => $canonicalUrl,
+        ];
+
+        if ($coverUrl) {
+            $audiobookSchema['image'] = $coverUrl;
+        }
+
+        if ($audiobook->duration_seconds && $audiobook->duration_seconds > 0) {
+            $audiobookSchema['duration'] = self::formatIsoDuration($audiobook->duration_seconds);
+        }
+
+        if ($audiobook->narrator) {
+            $audiobookSchema['readBy'] = [
+                '@type' => 'Person',
+                'name' => $audiobook->narrator,
+            ];
+        }
+
+        if ($audiobook->author_name) {
+            $audiobookSchema['author'] = [
+                '@type' => 'Person',
+                'name' => $audiobook->author_name,
+            ];
+        }
+
+        $parts = [];
+        foreach ($audiobook->publishedChapters as $chapter) {
+            $chTrans = $chapter->localized($locale) ?? $chapter->translations->first();
+            $chTitle = $chTrans?->title ?? "अध्याय {$chapter->chapter_number}";
+
+            $part = [
+                '@type' => 'AudioObject',
+                'name' => $chTitle,
+            ];
+
+            if ($chapter->audio_url) {
+                $part['contentUrl'] = $chapter->audio_url;
+            }
+
+            if ($chapter->duration_seconds && $chapter->duration_seconds > 0) {
+                $part['duration'] = self::formatIsoDuration($chapter->duration_seconds);
+            }
+
+            $parts[] = $part;
+        }
+
+        if (! empty($parts)) {
+            $audiobookSchema['hasPart'] = $parts;
+        }
+
+        $structuredData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => $breadcrumbElements,
+            ],
+            $audiobookSchema,
+        ];
+
+        return new SeoData(
+            title: $seoTitle,
+            description: $description,
+            canonicalUrl: $canonicalUrl,
+            robots: $robots,
+            ogTitle: $seoTitle,
+            ogDescription: $description,
+            ogImage: $coverUrl ?? asset('images/og-default.jpg'),
+            ogType: 'website',
+            ogUrl: $canonicalUrl,
+            locale: $locale,
+            twitterCard: 'summary_large_image',
+            twitterTitle: $seoTitle,
+            twitterDescription: $description,
+            twitterImage: $coverUrl ?? asset('images/og-default.jpg'),
+            hreflangs: $hreflangs,
+            breadcrumbs: $breadcrumbs,
+            structuredData: $structuredData,
+        );
+    }
+
+    /**
+     * Format seconds to ISO 8601 Duration (e.g. PT2H, PT30M, PT1H15M30S).
+     */
+    public static function formatIsoDuration(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return 'PT0S';
+        }
+
+        $hours = floor($seconds / 3600);
+        $minutes = floor(($seconds % 3600) / 60);
+        $secs = $seconds % 60;
+
+        $iso = 'PT';
+        if ($hours > 0) {
+            $iso .= "{$hours}H";
+        }
+        if ($minutes > 0) {
+            $iso .= "{$minutes}M";
+        }
+        if ($secs > 0 || ($hours == 0 && $minutes == 0)) {
+            $iso .= "{$secs}S";
+        }
+
+        return $iso;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Authors\Schemas;
 
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -25,6 +26,17 @@ class AuthorForm
 
                         Toggle::make('is_active')
                             ->default(true),
+
+                        FileUpload::make('portrait_image')
+                            ->label('Author Portrait (लेखक का चित्र)')
+                            ->image()
+                            ->disk('public')
+                            ->directory('authors')
+                            ->visibility('public')
+                            ->imageEditor()
+                            ->maxSize(5120)
+                            ->columnSpanFull()
+                            ->helperText('Upload author photo (JPG, PNG, WebP).'),
                     ])
                     ->columns(2),
 

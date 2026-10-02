@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Services\Analytics\AnalyticsService;
+use App\Services\Archive\ArchiveOrgService;
 use App\Services\Discovery\BookDiscoveryService;
 use App\Services\SEO\SeoManager;
 use App\Support\Analytics\AnalyticsEvent;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +17,46 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class BookController extends Controller
 {
+    /**
+     * Display a paginated listing of all published books in the library catalog.
+     */
+    public function index(Request $request): View
+    {
+        $sort = $request->query('sort', 'popular');
+
+        $query = Book::published()
+            ->with([
+                'translations',
+                'authors.translations',
+                'categories.translations',
+                'media',
+            ]);
+
+        match ($sort) {
+            'rating' => $query->orderByDesc('rating_average')->orderByDesc('rating_count'),
+            'newest' => $query->orderByDesc('publication_year')->orderByDesc('id'),
+            'popular' => $query->orderByDesc('view_count'),
+            default => $query->orderByDesc('view_count'),
+        };
+
+        $books = $query->paginate(18)->withQueryString();
+
+        $isHindi = app()->getLocale() === 'hi';
+        $title = $isHindi
+            ? 'सभी पुस्तकें — हिन्दी पीडीएफ पुस्तकालय (All Books)'
+            : 'All Books Catalog — Hindi PDF Library';
+
+        return view('public.books.index', compact('books', 'sort', 'title'));
+    }
+
+    /**
+     * Dedicated direct landing for Shree Hanuman Chalisa.
+     */
+    public function showHanumanChalisa(): View
+    {
+        return $this->show(app()->getLocale(), 'hanuman-chalisa');
+    }
+
     /**
      * Display the specified book detail page.
      */
@@ -57,6 +99,8 @@ class BookController extends Controller
         $discovery = app(BookDiscoveryService::class);
         $authorBooks = $discovery->relatedByAuthor($book, 4);
         $relatedBooks = $discovery->relatedByCategory($book, 4, $authorBooks);
+        $relatedPrayers = $discovery->relatedPrayers($book, 6);
+        $relatedDeityBooks = $discovery->relatedBooksForDeity($book, 6);
 
         // Digital media asset (e.g. PDF)
         $pdfMedia = $book->media->where('collection_name', 'pdf')->first()
@@ -78,6 +122,8 @@ class BookController extends Controller
             'reviews',
             'authorBooks',
             'relatedBooks',
+            'relatedPrayers',
+            'relatedDeityBooks',
             'pdfMedia',
             'ratingDistribution',
             'seo'
@@ -109,15 +155,185 @@ class BookController extends Controller
             }
         }
 
-        if (! $book->canDownloadPdf()) {
-            abort(403, 'Reading is not permitted for this title.');
-        }
-
+        // Capture book_read analytics
         app(AnalyticsService::class)->captureFromRequest($request, AnalyticsEvent::BOOK_READ, [
             'book_id' => $book->id,
         ]);
 
-        return redirect()->route('books.show', ['slug' => $book->slug]);
+        return redirect()->route('books.interactive_reader', ['slug' => $book->slug]);
+    }
+
+    /**
+     * Interactive Audio & Flip Reader for online page-by-page study and narration.
+     */
+    public function interactiveReader(Request $request, string $localeOrSlug, ?string $slug = null): View
+    {
+        $slug = $slug ?? $localeOrSlug;
+        $book = Book::where('slug', $slug)
+            ->with(['authors.translations', 'categories.translations', 'originalLanguage', 'media', 'translations'])
+            ->firstOrFail();
+
+        if (! $book->isPublished()) {
+            abort(404);
+        }
+
+        // Capture reading analytics
+        app(AnalyticsService::class)->captureFromRequest($request, AnalyticsEvent::BOOK_READ, [
+            'book_id' => $book->id,
+        ]);
+
+        $archiveService = app(ArchiveOrgService::class);
+        $archiveIdentifier = $archiveService->extractIdentifier($book->source_url);
+        $isArchive = $archiveIdentifier !== null;
+
+        // Locate PDF media (local uploaded file)
+        $pdfMedia = $book->media->where('collection_name', 'pdf')->first()
+            ?? $book->media->filter(fn ($m) => str_contains($m->mime_type ?? '', 'pdf'))->first();
+
+        // Build PDF URL using the unprefixed route (avoids locale parameter requirement)
+        $pdfUrl = null;
+        if ($pdfMedia) {
+            $pdfUrl = url('/books/'.$book->slug.'/download');
+        }
+
+        // Prioritize Hindi translation for the reader text and audio narration
+        // so that authentic Hindi Devanagari text is displayed and spoken aloud
+        $hindiTranslation = $book->translations->where('locale', 'hi')->first();
+        $locale = app()->getLocale();
+        $activeTranslation = $book->translations->where('locale', $locale)->first()
+            ?? $book->translations->first();
+
+        $translation = $hindiTranslation ?? $activeTranslation;
+
+        // Fetch Archive.org OCR text pages (cached 24h) — powers both read & audio modes
+        $archiveTextPages = [];
+        if ($isArchive && $archiveIdentifier) {
+            try {
+                $archiveTextPages = $archiveService->getBookTextPages($archiveIdentifier, 250);
+            } catch (\Throwable) {
+                // Silently ignore — will show description fallback
+            }
+        }
+
+        // Build comprehensive book text pages
+        $bookTextPages = [];
+        $pageNum = 1;
+
+        // Page 1: Book Overview & Description (clean, human-written Hindi text)
+        if (! empty($translation?->description)) {
+            $bookTextPages[] = [
+                'page' => $pageNum++,
+                'title' => 'पुस्तक परिचय (Book Overview)',
+                'text' => trim($translation->description),
+            ];
+        }
+
+        // Page 2: Synopsis & Summary
+        if (! empty($translation?->summary)) {
+            $bookTextPages[] = [
+                'page' => $pageNum++,
+                'title' => 'कथानक व सारांश (Summary & Synopsis)',
+                'text' => trim($translation->summary),
+            ];
+        }
+
+        // Page 3: Why Read
+        if (! empty($translation?->why_read)) {
+            $bookTextPages[] = [
+                'page' => $pageNum++,
+                'title' => 'यह पुस्तक क्यों पढ़ें (Why Read)',
+                'text' => trim($translation->why_read),
+            ];
+        }
+
+        // Subsequent pages: Extracted book text from Archive.org
+        if (! empty($archiveTextPages)) {
+            foreach ($archiveTextPages as $p) {
+                $bookTextPages[] = [
+                    'page' => $pageNum++,
+                    'title' => 'अध्याय / पृष्ठ '.($pageNum - 1),
+                    'text' => $p['text'],
+                ];
+            }
+        }
+
+        // Final fallback if absolutely no text is available
+        if (empty($bookTextPages)) {
+            $bookTextPages[] = [
+                'page' => 1,
+                'title' => $book->title,
+                'text' => $book->title.' — '.($book->authors->first()?->name ?? '').' द्वारा रचित एक महत्वपूर्ण पुस्तक। यह डिजिटल संस्करण हिन्दी पीडीएफ पुस्तकालय पर अध्ययन एवं श्रवण हेतु उपलब्ध कराया गया है।',
+            ];
+        }
+
+        $readerMode = 'text';
+        if ($pdfMedia && $pdfUrl) {
+            $readerMode = 'pdf';
+        }
+
+        $archiveEmbedUrl = $isArchive ? $archiveService->getEmbedUrl($archiveIdentifier) : null;
+        $archiveDetailsUrl = $isArchive ? $archiveService->getDetailsUrl($archiveIdentifier) : null;
+        $totalTextPages = count($bookTextPages);
+        $initialMode = $request->query('mode', 'read');
+
+        return view('public.books.reader', compact(
+            'book',
+            'isArchive',
+            'archiveIdentifier',
+            'pdfMedia',
+            'pdfUrl',
+            'readerMode',
+            'archiveEmbedUrl',
+            'archiveDetailsUrl',
+            'bookTextPages',
+            'totalTextPages',
+            'translation',
+            'initialMode'
+        ));
+    }
+
+    /**
+     * JSON manifest endpoint for Archive.org or PDF page data.
+     */
+    public function archiveManifest(Request $request, string $localeOrSlug, ?string $slug = null): JsonResponse
+    {
+        $slug = $slug ?? $localeOrSlug;
+        $book = Book::where('slug', $slug)->firstOrFail();
+
+        if (! $book->isPublished()) {
+            abort(404);
+        }
+
+        $archiveService = app(ArchiveOrgService::class);
+        $archiveIdentifier = $archiveService->extractIdentifier($book->source_url);
+
+        if ($archiveIdentifier) {
+            $manifest = $archiveService->getManifest($archiveIdentifier);
+            if ($manifest) {
+                return response()->json($manifest);
+            }
+        }
+
+        // Default text-mode manifest
+        $desc = $book->description ?: 'पवित्र भारतीय वाङ्मय का डिजिटल संस्करण।';
+
+        return response()->json([
+            'identifier' => $book->slug,
+            'title' => $book->title,
+            'reader_mode' => 'text',
+            'embed_url' => '',
+            'details_url' => '',
+            'page_count' => $book->pages ?: 1,
+            'pages' => [
+                [
+                    'page_number' => 1,
+                    'image_url' => $book->cover_url ?: '',
+                    'large_image_url' => $book->cover_url ?: '',
+                    'text' => $desc,
+                ],
+            ],
+            'has_ocr' => false,
+        ]);
     }
 
     /**

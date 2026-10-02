@@ -2,9 +2,26 @@
     'items' => [], // array of ['label' => '...', 'url' => '...']
 ])
 
+@php
+    // Filter out leading 'Home' or root URL items to prevent duplicate Home breadcrumbs
+    $cleanItems = collect($items)->filter(function ($item, $key) {
+        if ($key === 0 || $key === '0') {
+            $label = strtolower(trim($item['label'] ?? ''));
+            $url = trim($item['url'] ?? '');
+            if (in_array($label, ['home', 'होम', 'घर', 'मुख्य पृष्ठ'], true)) {
+                return false;
+            }
+            if ($url === route('home') || $url === '/' || $url === url('/') || $url === url('/hi') || $url === url('/en')) {
+                return false;
+            }
+        }
+        return true;
+    })->values();
+@endphp
+
 <nav aria-label="Breadcrumb" {{ $attributes->merge(['class' => 'flex text-xs text-slate-500 py-3']) }}>
     <ol class="flex flex-wrap items-center gap-1.5 list-none p-0 m-0">
-        <!-- Home Link -->
+        {{-- Root Home Link --}}
         <li class="flex items-center">
             <a href="{{ route('home') }}" class="text-slate-500 hover:text-slate-900 transition flex items-center gap-1">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -14,7 +31,7 @@
             </a>
         </li>
 
-        @foreach ($items as $item)
+        @foreach ($cleanItems as $item)
             <li class="flex items-center gap-1.5">
                 <svg class="h-3 w-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />

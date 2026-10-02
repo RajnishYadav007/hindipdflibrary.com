@@ -19,6 +19,7 @@ class BookTranslation extends Model
         'summary',
         'key_themes',
         'why_read',
+        'lyrics',
         'seo_title',
         'seo_description',
     ];

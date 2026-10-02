@@ -34,6 +34,22 @@ class Author extends Model
     }
 
     /**
+     * Get the resolved author name for the active locale.
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->localized()?->name ?? $this->slug;
+    }
+
+    /**
+     * Get the resolved biography for the active locale.
+     */
+    public function getBiographyAttribute(): ?string
+    {
+        return $this->localized()?->biography;
+    }
+
+    /**
      * Translations for the author.
      */
     public function translations(): HasMany

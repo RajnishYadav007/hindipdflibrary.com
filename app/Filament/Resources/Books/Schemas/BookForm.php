@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Books\Schemas;
 
 use App\Enums\BookStatus;
+use App\Enums\CopyrightStatus;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
@@ -31,19 +33,61 @@ class BookForm
 
                                 Select::make('status')
                                     ->options([
-                                        BookStatus::Draft->value => 'Draft',
-                                        BookStatus::Published->value => 'Published',
-                                        BookStatus::Archived->value => 'Archived',
+                                        BookStatus::Draft->value => 'Draft (अप्रकाशित)',
+                                        BookStatus::Published->value => 'Published (प्रकाशित)',
+                                        BookStatus::Archived->value => 'Archived (पुरालेखित)',
                                     ])
                                     ->default(BookStatus::Draft->value)
                                     ->required(),
 
                                 Select::make('original_language_id')
-                                    ->label('Original Language')
+                                    ->label('Original Language (मूल भाषा)')
                                     ->relationship('originalLanguage', 'name')
                                     ->searchable()
                                     ->preload()
                                     ->placeholder('Select original language'),
+
+                                Select::make('content_type')
+                                    ->label('Content / Spiritual Type (प्रारूप)')
+                                    ->options([
+                                        'book' => '📖 पुस्तक / ग्रंथ (Book / Scripture)',
+                                        'chalisa' => '🚩 चालीसा (Chalisa)',
+                                        'aarti' => '🪔 आरती (Aarti)',
+                                        'stotra' => '⚡ स्तोत्र / पाठ (Stotra)',
+                                        'mantra' => '🕉️ मंत्र / सूक्त (Mantra / Suktam)',
+                                    ])
+                                    ->default('book')
+                                    ->required(),
+
+                                Select::make('deity')
+                                    ->label('Deity / Topic Entity (देवता / मुख्य विषय)')
+                                    ->options([
+                                        'hanuman' => 'श्री हनुमान जी (Lord Hanuman)',
+                                        'shiva' => 'भगवान शिव (Lord Shiva)',
+                                        'ram' => 'प्रभु श्री राम (Lord Rama)',
+                                        'krishna' => 'भगवान श्री कृष्ण (Lord Krishna)',
+                                        'ganesh' => 'श्री गणेश (Lord Ganesha)',
+                                        'durga' => 'मां दुर्गा (Maa Durga)',
+                                        'lakshmi' => 'माता लक्ष्मी (Maa Lakshmi)',
+                                        'saraswati' => 'माता सरस्वती (Maa Saraswati)',
+                                        'vishnu' => 'भगवान विष्णु (Lord Vishnu)',
+                                        'surya' => 'भगवान सूर्य (Lord Surya)',
+                                        'vedas' => 'वेद एवं उपनिषद् (Vedas & Upanishads)',
+                                    ])
+                                    ->searchable()
+                                    ->placeholder('Select Divine Entity')
+                                    ->helperText('Associates this content with its Divine Topic Cluster for automated internal cross-linking.'),
+
+                                FileUpload::make('cover_image')
+                                    ->label('Book Cover Image (पुस्तक का मुखपृष्ठ)')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('covers')
+                                    ->visibility('public')
+                                    ->imageEditor()
+                                    ->maxSize(10240)
+                                    ->columnSpanFull()
+                                    ->helperText('Upload front book cover (JPG, PNG, WebP). If omitted, the front cover will be automatically extracted from the first page of the PDF or fetched from Archive.org.'),
                             ])
                             ->columns(3),
 
@@ -53,6 +97,7 @@ class BookForm
                                 Select::make('authors')
                                     ->label('Authors / Contributors')
                                     ->relationship('authors', 'slug')
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => ($record->translations->first()?->name ?? $record->slug).' ('.$record->slug.')')
                                     ->multiple()
                                     ->preload()
                                     ->searchable()
@@ -60,12 +105,14 @@ class BookForm
 
                                 Select::make('categories')
                                     ->relationship('categories', 'slug')
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => ($record->translations->first()?->name ?? $record->slug).' ('.$record->slug.')')
                                     ->multiple()
                                     ->preload()
                                     ->searchable(),
 
                                 Select::make('genres')
                                     ->relationship('genres', 'slug')
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => ($record->translations->first()?->name ?? $record->slug).' ('.$record->slug.')')
                                     ->multiple()
                                     ->preload()
                                     ->searchable(),
@@ -146,6 +193,13 @@ class BookForm
                                             ->rows(2)
                                             ->columnSpanFull(),
 
+                                        Textarea::make('lyrics')
+                                            ->label('Lyrics & Recitation Text / पाठ, चालीसा, आरती व स्तोत्र')
+                                            ->placeholder('सम्पूर्ण चालीसा, स्तोत्र, आरती, भजन अथवा श्लोक यहाँ लिखें (Enter devotional lyrics or recitation text here)...')
+                                            ->helperText('Enter full lyrical verses, chaupais, dohas, or devotional text. Displays on the book page with a clean devotional layout, font-size adjustment (A-/A+), copy button, and audio reading support.')
+                                            ->rows(10)
+                                            ->columnSpanFull(),
+
                                         TextInput::make('seo_title')
                                             ->maxLength(255),
 
@@ -161,10 +215,29 @@ class BookForm
                             ->icon('heroicon-m-shield-check')
                             ->schema([
                                 TextInput::make('source_url')
-                                    ->label('Archive / Source URL')
+                                    ->label('Archive / Source URL (आर्काइव / बाहरी स्रोत लिंक)')
                                     ->url()
                                     ->maxLength(500)
+                                    ->placeholder('https://archive.org/details/your-book-id')
+                                    ->helperText('Enter Internet Archive (archive.org/details/...) or external repository URL. Automatically powers the interactive audio & page flip reader.')
                                     ->columnSpanFull(),
+
+                                FileUpload::make('pdf_file')
+                                    ->label('Upload Book PDF (लोकल PDF फ़ाइल अपलोड)')
+                                    ->disk('private_pdfs')
+                                    ->directory('')
+                                    ->visibility('private')
+                                    ->acceptedFileTypes(['application/pdf'])
+                                    ->maxSize(102400)
+                                    ->helperText('Upload private PDF document for platform-hosted reading and downloading. Stored securely outside public webroot.')
+                                    ->columnSpanFull(),
+
+                                Select::make('copyright_status')
+                                    ->label('Copyright & Hosting Rights (कॉपीराइट स्थिति)')
+                                    ->options(collect(CopyrightStatus::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()]))
+                                    ->default(CopyrightStatus::PublicDomain->value)
+                                    ->required()
+                                    ->helperText('Determines legal rights for local hosting and direct downloading.'),
 
                                 TextInput::make('license_type')
                                     ->placeholder('e.g. Public Domain, CC-BY-SA 4.0')
@@ -174,13 +247,10 @@ class BookForm
                                     ->placeholder('e.g. Public Domain, Government of India')
                                     ->maxLength(255),
 
-                                TextInput::make('copyright_status')
-                                    ->placeholder('e.g. public_domain, copyrighted')
-                                    ->maxLength(50),
-
                                 Textarea::make('permission_notes')
                                     ->rows(3)
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull()
+                                    ->placeholder('Document copyright research, author demise date (>60 years in India), or publisher permission proof.'),
                             ])
                             ->columns(3),
                     ])

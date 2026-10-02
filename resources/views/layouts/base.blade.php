@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-[#fcfaf7]">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,7 +16,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="flex flex-col min-h-screen font-sans text-slate-800 bg-slate-50 antialiased selection:bg-brand-100 selection:text-brand-900">
+<body class="flex flex-col min-h-screen font-sans text-slate-800 bg-[#fcfaf7] antialiased selection:bg-amber-100 selection:text-amber-900 pb-16 md:pb-0">
     <!-- Public Site Header -->
     <x-header />
 
@@ -31,6 +31,15 @@
 
     <!-- Public Site Footer -->
     <x-footer />
+
+    <!-- Mobile Bottom Navigation (Visible on mobile screens) -->
+    <x-mobile-bottom-nav />
+
+    <!-- Global Audio TTS Player (Excluded on Book pages where audio is strictly forbidden) -->
+    @unless(request()->routeIs('books.*', 'book.*', 'books.show', 'books.read', 'books.download', 'books.interactive_reader', 'books.plural.*'))
+        <x-audio-player />
+    @endunless
+    <x-book-drawer />
 
     @livewireScripts
 </body>

@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Books\Tables;
 
 use App\Enums\BookStatus;
+use App\Models\Book;
+use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -11,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -23,6 +26,12 @@ class BooksTable
     {
         return $table
             ->columns([
+                ImageColumn::make('cover')
+                    ->label('Cover')
+                    ->state(fn (Book $record) => $record->cover_url)
+                    ->square()
+                    ->size(40),
+
                 TextColumn::make('translations.title')
                     ->label('Title')
                     ->searchable()
@@ -42,6 +51,32 @@ class BooksTable
                         default => 'gray',
                     })
                     ->sortable(),
+
+                TextColumn::make('digital_source')
+                    ->label('Digital Asset')
+                    ->badge()
+                    ->state(function (Book $record): string {
+                        $hasPdf = $record->media()->where('collection_name', 'pdf')->exists();
+                        $hasArchive = ! empty($record->source_url);
+
+                        if ($hasPdf && $hasArchive) {
+                            return 'PDF + Archive';
+                        }
+                        if ($hasPdf) {
+                            return 'Local PDF';
+                        }
+                        if ($hasArchive) {
+                            return 'Archive.org';
+                        }
+
+                        return 'Metadata Only';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'PDF + Archive' => 'primary',
+                        'Local PDF' => 'success',
+                        'Archive.org' => 'info',
+                        default => 'gray',
+                    }),
 
                 TextColumn::make('authors.slug')
                     ->badge()
@@ -78,6 +113,18 @@ class BooksTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
+                Action::make('reader')
+                    ->label('Reader')
+                    ->icon('heroicon-m-book-open')
+                    ->color('info')
+                    ->url(fn (Book $record) => route('books.interactive_reader', $record->slug))
+                    ->openUrlInNewTab(),
+                Action::make('view_page')
+                    ->label('View')
+                    ->icon('heroicon-m-arrow-top-right-on-square')
+                    ->color('gray')
+                    ->url(fn (Book $record) => route('books.show', $record->slug))
+                    ->openUrlInNewTab(),
                 EditAction::make(),
                 DeleteAction::make(),
                 RestoreAction::make(),

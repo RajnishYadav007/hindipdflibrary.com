@@ -37,6 +37,13 @@ class UserResource extends Resource
         return UsersTable::configure($table);
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\PointsLedgerRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [

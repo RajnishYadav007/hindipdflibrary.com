@@ -48,6 +48,29 @@ class UserForm
                             ->default(false),
                     ])
                     ->columns(2),
+
+                Section::make('Contributor Recognition & Library Points')
+                    ->schema([
+                        TextInput::make('contributor_level')
+                            ->label('Contributor Level')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->formatStateUsing(fn (?string $state): string => ucwords(str_replace('_', ' ', $state ?? 'reader'))),
+
+                        TextInput::make('total_points')
+                            ->label('Cached Library Points')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->numeric()
+                            ->helperText('Points are auditable and derived from the append-only ledger below.'),
+
+                        TextInput::make('referral_code')
+                            ->label('Referral Code')
+                            ->disabled()
+                            ->dehydrated(false),
+                    ])
+                    ->columns(3)
+                    ->collapsible(),
             ]);
     }
 }

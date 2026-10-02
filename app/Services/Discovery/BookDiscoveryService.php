@@ -139,4 +139,99 @@ class BookDiscoveryService
             ->take($limit)
             ->get();
     }
+
+    /**
+     * Infer the divine entity / deity from book attributes if deity is not explicitly set.
+     */
+    public function inferDeity(Book $book): ?string
+    {
+        if (! empty($book->deity)) {
+            return $book->deity;
+        }
+
+        $haystack = strtolower($book->slug.' '.($book->title ?? ''));
+
+        $keywordMap = [
+            'hanuman' => ['hanuman', 'bajrang', 'maruti', 'sundarkand', 'sundar-kand', 'संकटमोचन', 'हनुमान', 'बजरंग'],
+            'shiva' => ['shiv', 'shiva', 'mahadev', 'bholenath', 'rudra', 'शिव', 'महादेव', 'भोलेनाथ', 'रुद्र'],
+            'ram' => ['ram', 'rama', 'ramayan', 'ramayana', 'ramcharitmanas', 'राम', 'रामायण', 'रामचरितमानस'],
+            'krishna' => ['krishna', 'gita', 'geeta', 'bhagavad', 'govind', 'कृष्ण', 'गीता', 'भागवत'],
+            'ganesh' => ['ganesh', 'ganpati', 'vinayak', 'गणेश', 'गणपति'],
+            'durga' => ['durga', 'kali', 'ambey', 'amritwani', 'दुर्गा', 'काली', 'अंबे'],
+            'lakshmi' => ['lakshmi', 'laxmi', 'महालक्ष्मी', 'लक्ष्मी'],
+            'saraswati' => ['saraswati', 'सरस्वती'],
+            'vishnu' => ['vishnu', 'narayan', 'विष्णु', 'नारायण'],
+            'surya' => ['surya', 'aditya', 'सूर्य', 'आदित्य'],
+            'vedas' => ['ved', 'puran', 'upanishad', 'वेद', 'पुराण', 'उपनिषद'],
+        ];
+
+        foreach ($keywordMap as $deityKey => $keywords) {
+            foreach ($keywords as $kw) {
+                if (str_contains($haystack, $kw)) {
+                    return $deityKey;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Discover devotional prayers (Chalisas, Aartis, Stotras) related to a book or prayer's deity.
+     */
+    public function relatedPrayers(Book $book, int $limit = 6): Collection
+    {
+        $deity = $this->inferDeity($book);
+
+        if (! $deity) {
+            return new Collection;
+        }
+
+        return Book::published()
+            ->where('id', '!=', $book->id)
+            ->where(function ($query) use ($deity) {
+                $query->where('deity', $deity)
+                    ->orWhereIn('content_type', ['chalisa', 'aarti', 'stotra', 'mantra'])
+                    ->where(function ($sub) use ($deity) {
+                        $sub->where('slug', 'like', "%{$deity}%")
+                            ->orWhereHas('translations', fn ($t) => $t->where('title', 'like', "%{$deity}%"));
+                    });
+            })
+            ->where(function ($query) {
+                $query->whereIn('content_type', ['chalisa', 'aarti', 'stotra', 'mantra'])
+                    ->orWhereHas('translations', fn ($t) => $t->whereNotNull('lyrics')->where('lyrics', '!=', ''));
+            })
+            ->with($this->eagerLoadRelations)
+            ->take($limit)
+            ->get();
+    }
+
+    /**
+     * Discover holy books and scriptures related to a prayer or book's deity.
+     */
+    public function relatedBooksForDeity(Book $book, int $limit = 6): Collection
+    {
+        $deity = $this->inferDeity($book);
+
+        if (! $deity) {
+            return new Collection;
+        }
+
+        return Book::published()
+            ->where('id', '!=', $book->id)
+            ->where(function ($query) use ($deity) {
+                $query->where('deity', $deity)
+                    ->orWhere(function ($sub) use ($deity) {
+                        $sub->where('slug', 'like', "%{$deity}%")
+                            ->orWhereHas('translations', fn ($t) => $t->where('title', 'like', "%{$deity}%"));
+                    });
+            })
+            ->where(function ($query) {
+                $query->where('content_type', 'book')
+                    ->orWhereNull('content_type');
+            })
+            ->with($this->eagerLoadRelations)
+            ->take($limit)
+            ->get();
+    }
 }

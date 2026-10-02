@@ -30,6 +30,20 @@ class UsersTable
                     ->color('primary')
                     ->searchable(),
 
+                TextColumn::make('contributor_level')
+                    ->label('Level')
+                    ->badge()
+                    ->color('warning')
+                    ->formatStateUsing(fn (?string $state): string => ucwords(str_replace('_', ' ', $state ?? 'reader')))
+                    ->sortable(),
+
+                TextColumn::make('total_points')
+                    ->label('Points')
+                    ->badge()
+                    ->color('success')
+                    ->numeric()
+                    ->sortable(),
+
                 IconColumn::make('is_admin')
                     ->label('Admin Flag')
                     ->boolean()

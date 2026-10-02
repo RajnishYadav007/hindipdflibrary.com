@@ -3,6 +3,11 @@
 namespace App\Providers;
 
 use App\Contracts\Search\SearchEngineInterface;
+use App\Models\Audiobook;
+use App\Models\Book;
+use App\Models\DevotionalContent;
+use App\Models\StorySeries;
+use App\Observers\ContentPublicationObserver;
 use App\Services\Search\MySqlSearchEngine;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -54,5 +59,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth', function (Request $request) {
             return Limit::perMinute(10)->by($request->ip());
         });
+
+        // Contributor Reward Observer registration
+        Book::observe(ContentPublicationObserver::class);
+        Audiobook::observe(ContentPublicationObserver::class);
+        DevotionalContent::observe(ContentPublicationObserver::class);
+        StorySeries::observe(ContentPublicationObserver::class);
     }
 }

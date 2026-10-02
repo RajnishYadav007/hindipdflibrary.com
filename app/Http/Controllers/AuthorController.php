@@ -7,9 +7,29 @@ use App\Services\Analytics\AnalyticsService;
 use App\Services\SEO\SeoManager;
 use App\Support\Analytics\AnalyticsEvent;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 
 class AuthorController extends Controller
 {
+    /**
+     * Display a paginated listing of active authors.
+     */
+    public function index(Request $request): View
+    {
+        $authors = Author::active()
+            ->with(['translations', 'media'])
+            ->withCount(['books' => fn ($q) => $q->published()])
+            ->orderByDesc('books_count')
+            ->paginate(18);
+
+        $isHindi = app()->getLocale() === 'hi';
+        $title = $isHindi
+            ? 'लेखक सूची — हिन्दी पीडीएफ पुस्तकालय (Authors Index)'
+            : 'Authors Index — Hindi PDF Library';
+
+        return view('public.authors.index', compact('authors', 'title'));
+    }
+
     /**
      * Display the specified author profile page.
      */

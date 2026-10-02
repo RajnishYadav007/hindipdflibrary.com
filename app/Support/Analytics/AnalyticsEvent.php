@@ -30,6 +30,22 @@ class AnalyticsEvent
 
     public const LANGUAGE_SWITCH = 'language_switch';
 
+    public const AUDIOBOOK_PLAY = 'audiobook_play';
+
+    public const AUDIOBOOK_CHAPTER_PLAY = 'chapter_play';
+
+    public const AUDIOBOOK_COMPLETED = 'audiobook_completed';
+
+    public const CHALISA_LISTEN = 'chalisa_listen';
+
+    public const AARTI_LISTEN = 'aarti_listen';
+
+    public const STORY_LISTEN = 'story_listen';
+
+    public const TTS_USAGE = 'tts_usage';
+
+    public const STORY_EPISODE_VIEW = 'story_episode_view';
+
     /**
      * Complete list of allowed event names.
      *
@@ -51,6 +67,14 @@ class AnalyticsEvent
             self::AUTHOR_VIEW,
             self::CATEGORY_VIEW,
             self::LANGUAGE_SWITCH,
+            self::AUDIOBOOK_PLAY,
+            self::AUDIOBOOK_CHAPTER_PLAY,
+            self::AUDIOBOOK_COMPLETED,
+            self::CHALISA_LISTEN,
+            self::AARTI_LISTEN,
+            self::STORY_LISTEN,
+            self::TTS_USAGE,
+            self::STORY_EPISODE_VIEW,
         ];
     }
 
